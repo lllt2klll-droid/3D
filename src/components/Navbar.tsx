@@ -62,6 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header
+      className="app-navbar"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -127,6 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mode Navigation Tabs */}
       <nav
+        className="app-navbar-modes"
         style={{
           display: 'flex',
           alignItems: 'center',

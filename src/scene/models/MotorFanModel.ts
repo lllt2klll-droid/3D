@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -13,8 +14,8 @@ export function createMotorFanMesh(comp: CircuitComponent): MotorFanObject {
 
   const isFan = comp.type === 'fan';
 
-  // Base mounting bracket
-  const baseGeo = new THREE.BoxGeometry(1.2, 0.12, 0.8);
+  // Base mounting bracket with soft rounded corners
+  const baseGeo = new RoundedBoxGeometry(1.2, 0.12, 0.8, 4, 0.05);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticLightBlue);
   baseMesh.position.y = 0.06;
   baseMesh.castShadow = true;
@@ -95,7 +96,7 @@ export function createMotorFanMesh(comp: CircuitComponent): MotorFanObject {
     wheelMesh.position.z = 0.2;
     rotorGroup.add(wheelMesh);
 
-    const notchGeo = new THREE.BoxGeometry(0.06, 0.16, 0.08);
+    const notchGeo = new RoundedBoxGeometry(0.06, 0.16, 0.08, 2, 0.02);
     const notchMesh = new THREE.Mesh(notchGeo, MATERIALS.plasticRed);
     notchMesh.position.set(0.08, 0.08, 0.2);
     rotorGroup.add(notchMesh);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -11,8 +12,8 @@ export function createBulbMesh(comp: CircuitComponent): BulbObject {
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Insulated base stand
-  const baseGeo = new THREE.CylinderGeometry(0.55, 0.6, 0.14, 24);
+  // Insulated base stand with soft rounded squircle shape
+  const baseGeo = new RoundedBoxGeometry(1.2, 0.14, 0.9, 4, 0.08);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticLightBlue);
   baseMesh.position.y = 0.07;
   baseMesh.castShadow = true;

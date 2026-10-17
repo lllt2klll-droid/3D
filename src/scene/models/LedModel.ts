@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -11,8 +12,8 @@ export function createLedMesh(comp: CircuitComponent): LedObject {
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Insulated base
-  const baseGeo = new THREE.CylinderGeometry(0.4, 0.45, 0.1, 24);
+  // Insulated base with soft rounded corners
+  const baseGeo = new RoundedBoxGeometry(1.0, 0.1, 0.8, 4, 0.05);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticDark);
   baseMesh.position.y = 0.05;
   baseMesh.castShadow = true;

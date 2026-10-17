@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -11,8 +12,8 @@ export function createPotentiometerMesh(comp: CircuitComponent): PotentiometerOb
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Round insulated base plate
-  const baseGeo = new THREE.CylinderGeometry(0.65, 0.7, 0.12, 24);
+  // Insulated base plate with soft rounded corners
+  const baseGeo = new RoundedBoxGeometry(1.2, 0.12, 1.0, 4, 0.06);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticLightBlue);
   baseMesh.position.y = 0.06;
   baseMesh.castShadow = true;
@@ -45,8 +46,8 @@ export function createPotentiometerMesh(comp: CircuitComponent): PotentiometerOb
   knobMesh.castShadow = true;
   knobGroup.add(knobMesh);
 
-  // White indicator pointer notch on knob
-  const pointerGeo = new THREE.BoxGeometry(0.06, 0.08, 0.22);
+  // White indicator pointer notch on knob with rounded edge
+  const pointerGeo = new RoundedBoxGeometry(0.06, 0.08, 0.22, 2, 0.02);
   const pointerMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const pointerMesh = new THREE.Mesh(pointerGeo, pointerMat);
   pointerMesh.position.set(0, 0.28, 0.16);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -11,9 +12,9 @@ export function createSolarPanelMesh(comp: CircuitComponent): SolarPanelObject {
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Triangular side support stands (matching the wooden/white diorama stand in user image)
+  // Triangular side support stands with rounded corners
   const standMat = MATERIALS.woodTrim;
-  const standGeo = new THREE.BoxGeometry(0.1, 0.9, 0.8);
+  const standGeo = new RoundedBoxGeometry(0.1, 0.9, 0.8, 3, 0.04);
   const leftStand = new THREE.Mesh(standGeo, standMat);
   leftStand.position.set(-0.65, 0.45, -0.1);
   leftStand.castShadow = true;
@@ -24,8 +25,8 @@ export function createSolarPanelMesh(comp: CircuitComponent): SolarPanelObject {
   rightStand.castShadow = true;
   group.add(rightStand);
 
-  // Base bottom plate
-  const baseGeo = new THREE.BoxGeometry(1.5, 0.1, 1.0);
+  // Base bottom plate with soft rounded edges
+  const baseGeo = new RoundedBoxGeometry(1.5, 0.1, 1.0, 4, 0.05);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticWhite);
   baseMesh.position.set(0, 0.05, 0);
   baseMesh.castShadow = true;
@@ -37,8 +38,8 @@ export function createSolarPanelMesh(comp: CircuitComponent): SolarPanelObject {
   panelTiltGroup.position.set(0, 0.65, 0);
   panelTiltGroup.rotation.x = -Math.PI / 5; // Tilted towards viewer/sun
 
-  // Panel outer frame (Clean warm wood/white border)
-  const frameGeo = new THREE.BoxGeometry(1.3, 1.0, 0.08);
+  // Panel outer frame with soft rounded edges
+  const frameGeo = new RoundedBoxGeometry(1.3, 1.0, 0.08, 3, 0.04);
   const frameMesh = new THREE.Mesh(frameGeo, MATERIALS.woodTrim);
   frameMesh.castShadow = true;
   panelTiltGroup.add(frameMesh);

@@ -46,7 +46,7 @@ export const ComponentActionWidget: React.FC<ComponentActionWidgetProps> = ({
 
   return (
     <div
-      className="stem-card animate-pulse-glow"
+      className="stem-card animate-pulse-glow component-action-widget"
       style={{
         position: 'absolute',
         top: '76px',

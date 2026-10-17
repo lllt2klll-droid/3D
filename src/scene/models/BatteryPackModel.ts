@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -7,16 +8,16 @@ export function createBatteryPackMesh(comp: CircuitComponent): THREE.Group {
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Double battery holder base tray (Black durable plastic)
-  const trayGeo = new THREE.BoxGeometry(1.6, 0.16, 1.2);
+  // Double battery holder base tray with soft rounded corners
+  const trayGeo = new RoundedBoxGeometry(1.6, 0.16, 1.2, 4, 0.06);
   const trayMesh = new THREE.Mesh(trayGeo, MATERIALS.plasticDark);
   trayMesh.position.y = 0.08;
   trayMesh.castShadow = true;
   trayMesh.receiveShadow = true;
   group.add(trayMesh);
 
-  // Center divider rib
-  const ribGeo = new THREE.BoxGeometry(1.4, 0.18, 0.08);
+  // Center divider rib with beveled edges
+  const ribGeo = new RoundedBoxGeometry(1.4, 0.18, 0.08, 2, 0.02);
   const ribMesh = new THREE.Mesh(ribGeo, MATERIALS.plasticDark);
   ribMesh.position.set(0, 0.17, 0);
   group.add(ribMesh);
@@ -59,13 +60,13 @@ export function createBatteryPackMesh(comp: CircuitComponent): THREE.Group {
   });
 
   // Series bridge busbar on left side connecting cell 1 and cell 2
-  const bridgeGeo = new THREE.BoxGeometry(0.08, 0.12, 0.68);
+  const bridgeGeo = new RoundedBoxGeometry(0.08, 0.12, 0.68, 2, 0.02);
   const bridgeMesh = new THREE.Mesh(bridgeGeo, MATERIALS.metalSilver);
   bridgeMesh.position.set(-0.62, 0.28, 0);
   group.add(bridgeMesh);
 
   // Prominent "3V" badge
-  const badgeGeo = new THREE.BoxGeometry(0.5, 0.02, 0.3);
+  const badgeGeo = new RoundedBoxGeometry(0.5, 0.02, 0.3, 2, 0.04);
   const badgeMesh = new THREE.Mesh(badgeGeo, MATERIALS.plasticYellow);
   badgeMesh.position.set(0, 0.17, 0);
   group.add(badgeMesh);

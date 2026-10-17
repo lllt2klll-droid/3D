@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -7,7 +8,7 @@ export function createBatteryMesh(comp: CircuitComponent): THREE.Group {
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Main battery cylinder (AA style)
+  // Main battery cylinder (AA style with rounded beveled edge)
   const bodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.1, 24);
   const bodyMesh = new THREE.Mesh(bodyGeo, MATERIALS.plasticBlue);
   bodyMesh.castShadow = true;
@@ -37,8 +38,8 @@ export function createBatteryMesh(comp: CircuitComponent): THREE.Group {
   posCapMesh.position.set(0.6, 0.35, 0);
   group.add(posCapMesh);
 
-  // Base platform support
-  const baseStandGeo = new THREE.BoxGeometry(1.4, 0.12, 0.7);
+  // Base platform support with soft rounded corners & beveled edges
+  const baseStandGeo = new RoundedBoxGeometry(1.4, 0.12, 0.7, 4, 0.05);
   const baseStandMesh = new THREE.Mesh(baseStandGeo, MATERIALS.plasticDark);
   baseStandMesh.position.set(0, 0.06, 0);
   baseStandMesh.castShadow = true;

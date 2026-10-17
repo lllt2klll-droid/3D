@@ -122,8 +122,8 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
                 }}
                 title={wc.label}
                 style={{
-                  width: '24px',
-                  height: '24px',
+                  width: '28px',
+                  height: '28px',
                   borderRadius: '50%',
                   backgroundColor: wc.hex,
                   border: isSelected ? '3px solid #ffffff' : '2px solid rgba(0,0,0,0.1)',

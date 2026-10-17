@@ -212,6 +212,27 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
 
   return (
     <>
+      {/* Mobile Backdrop Overlay when sidebar is open on small screens */}
+      {isOpen && (
+        <div
+          className="mobile-backdrop show-on-mobile-only"
+          onClick={() => {
+            sounds.playClick();
+            onToggleOpen();
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(15, 23, 42, 0.45)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 28,
+          }}
+        />
+      )}
+
       {/* Toggle Tab on Left Edge */}
       <button
         onClick={() => {
@@ -242,7 +263,7 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
 
       {/* Vertical Component Drawer (Left Sidebar) */}
       <aside
-        className="stem-card"
+        className="stem-card component-sidebar-drawer"
         style={{
           position: 'absolute',
           top: '72px',
@@ -315,6 +336,9 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
                 onClick={() => {
                   sounds.playClick();
                   onAddComponent(item.type);
+                  if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+                    onToggleOpen();
+                  }
                 }}
                 style={{
                   display: 'flex',

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -15,8 +16,8 @@ export function createPushButtonMesh(
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Square sturdy base (Slate plastic)
-  const baseGeo = new THREE.BoxGeometry(1.2, 0.12, 1.0);
+  // Square sturdy base with soft rounded corners (Slate plastic)
+  const baseGeo = new RoundedBoxGeometry(1.2, 0.12, 1.0, 4, 0.06);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticDark);
   baseMesh.position.y = 0.06;
   baseMesh.castShadow = true;

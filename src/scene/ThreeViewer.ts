@@ -78,10 +78,15 @@ export class ThreeViewer {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xf6f9fc);
 
-    // 2. Camera Setup (Isometric pedagogical angle)
+    // 2. Camera Setup (Isometric pedagogical angle with mobile portrait compensation)
     const aspect = container.clientWidth / Math.max(container.clientHeight, 1);
-    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 100);
-    this.camera.position.set(5.5, 6.0, 6.5);
+    const initialFov = aspect < 1.0 ? Math.min(75, 45 / Math.max(aspect, 0.5)) : 45;
+    this.camera = new THREE.PerspectiveCamera(initialFov, aspect, 0.1, 100);
+    if (aspect < 1.0) {
+      this.camera.position.set(6.5, 8.0, 7.5);
+    } else {
+      this.camera.position.set(5.5, 6.0, 6.5);
+    }
 
     // 3. Renderer Setup
     this.renderer = new THREE.WebGLRenderer({
@@ -97,14 +102,19 @@ export class ThreeViewer {
     this.renderer.domElement.style.touchAction = 'none';
     container.appendChild(this.renderer.domElement);
 
-    // 4. OrbitControls Setup
+    // 4. OrbitControls Setup with smooth mobile touch navigation
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
     this.controls.target.set(0, 0.5, 0);
     this.controls.minDistance = 2.5;
-    this.controls.maxDistance = 14;
+    this.controls.maxDistance = 16;
     this.controls.maxPolarAngle = Math.PI / 2 - 0.06;
+    // Mobile touch ergonomics: 1 finger to rotate around scene, 2 fingers to pinch-zoom / pan
+    this.controls.touches = {
+      ONE: THREE.TOUCH.ROTATE,
+      TWO: THREE.TOUCH.DOLLY_PAN,
+    };
 
     // 5. Lighting Setup
     this.ambientLight = new THREE.AmbientLight(0xffffff, 1.25);
@@ -154,7 +164,9 @@ export class ThreeViewer {
     if (this.isDestroyed || !this.container) return;
     const width = this.container.clientWidth;
     const height = Math.max(this.container.clientHeight, 1);
-    this.camera.aspect = width / height;
+    const aspect = width / height;
+    this.camera.aspect = aspect;
+    this.camera.fov = aspect < 1.0 ? Math.min(75, 45 / Math.max(aspect, 0.5)) : 45;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
   };
@@ -516,7 +528,15 @@ export class ThreeViewer {
    * Reset camera to isometric sweet spot
    */
   public resetCamera() {
-    this.camera.position.set(5.5, 6.0, 6.5);
+    const aspect = this.camera.aspect;
+    if (aspect < 1.0) {
+      this.camera.position.set(6.5, 8.0, 7.5);
+      this.camera.fov = Math.min(75, 45 / Math.max(aspect, 0.5));
+    } else {
+      this.camera.position.set(5.5, 6.0, 6.5);
+      this.camera.fov = 45;
+    }
+    this.camera.updateProjectionMatrix();
     this.controls.target.set(0, 0.5, 0);
     this.controls.update();
   }

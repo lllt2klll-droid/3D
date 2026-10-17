@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -7,8 +8,8 @@ export function createResistorMesh(comp: CircuitComponent): THREE.Group {
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Insulated base stand
-  const baseGeo = new THREE.BoxGeometry(1.3, 0.1, 0.6);
+  // Insulated base stand with soft rounded corners
+  const baseGeo = new RoundedBoxGeometry(1.3, 0.1, 0.6, 4, 0.05);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticLightBlue);
   baseMesh.position.y = 0.05;
   baseMesh.castShadow = true;

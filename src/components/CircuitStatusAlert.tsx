@@ -35,7 +35,7 @@ export const CircuitStatusAlert: React.FC<CircuitStatusAlertProps> = ({ analysis
 
   return (
     <div
-      className="stem-card"
+      className="stem-card circuit-status-alert"
       style={{
         backgroundColor: bgColor,
         borderColor: borderColor,

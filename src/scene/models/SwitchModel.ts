@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -15,8 +16,8 @@ export function createSwitchMesh(
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Insulated rectangular base
-  const baseGeo = new THREE.BoxGeometry(1.6, 0.12, 0.7);
+  // Insulated rectangular base with soft rounded corners & beveled edges
+  const baseGeo = new RoundedBoxGeometry(1.6, 0.12, 0.7, 4, 0.05);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticDark);
   baseMesh.position.y = 0.06;
   baseMesh.castShadow = true;
@@ -38,7 +39,7 @@ export function createSwitchMesh(
   group.add(catchPostMesh);
 
   // Contact Jaws (U-bracket on catch post)
-  const jawGeo = new THREE.BoxGeometry(0.06, 0.12, 0.15);
+  const jawGeo = new RoundedBoxGeometry(0.06, 0.12, 0.15, 2, 0.02);
   const jawMesh = new THREE.Mesh(jawGeo, MATERIALS.metalBrass);
   jawMesh.position.set(0.45, 0.32, 0);
   group.add(jawMesh);
@@ -48,8 +49,8 @@ export function createSwitchMesh(
   leverGroup.position.set(-0.45, 0.28, 0);
   leverGroup.name = `lever::${comp.id}`;
 
-  // Knife brass blade
-  const bladeGeo = new THREE.BoxGeometry(0.95, 0.06, 0.04);
+  // Knife brass blade with smoothed edges
+  const bladeGeo = new RoundedBoxGeometry(0.95, 0.06, 0.04, 2, 0.015);
   const bladeMesh = new THREE.Mesh(bladeGeo, MATERIALS.metalBrass);
   bladeMesh.position.set(0.46, 0, 0);
   bladeMesh.castShadow = true;

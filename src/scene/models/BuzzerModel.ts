@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -11,8 +12,8 @@ export function createBuzzerMesh(comp: CircuitComponent): BuzzerObject {
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Insulated round base platform
-  const baseGeo = new THREE.CylinderGeometry(0.55, 0.6, 0.12, 24);
+  // Insulated base platform with soft rounded corners
+  const baseGeo = new RoundedBoxGeometry(1.2, 0.12, 1.0, 4, 0.06);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticLightBlue);
   baseMesh.position.y = 0.06;
   baseMesh.castShadow = true;

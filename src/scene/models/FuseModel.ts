@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { MATERIALS } from '../materials';
 import { CircuitComponent } from '../../types';
 
@@ -11,21 +12,22 @@ export function createFuseMesh(comp: CircuitComponent): FuseObject {
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Insulated base holder (White/light cyan plastic)
-  const baseGeo = new THREE.BoxGeometry(1.5, 0.12, 0.7);
+  // Insulated base holder with soft rounded edges (White/light cyan plastic)
+  const baseGeo = new RoundedBoxGeometry(1.5, 0.12, 0.7, 4, 0.05);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticLightBlue);
   baseMesh.position.y = 0.06;
   baseMesh.castShadow = true;
   baseMesh.receiveShadow = true;
   group.add(baseMesh);
 
-  // Two mounting clips for fuse (Silver spring clips)
+  // Two mounting clips for fuse (Silver spring clips with rounded corners)
   const clipMat = MATERIALS.metalSilver;
-  const leftClip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.24), clipMat);
+  const clipGeo = new RoundedBoxGeometry(0.12, 0.22, 0.24, 2, 0.03);
+  const leftClip = new THREE.Mesh(clipGeo, clipMat);
   leftClip.position.set(-0.42, 0.2, 0);
   group.add(leftClip);
 
-  const rightClip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.24), clipMat);
+  const rightClip = new THREE.Mesh(clipGeo, clipMat);
   rightClip.position.set(0.42, 0.2, 0);
   group.add(rightClip);
 
