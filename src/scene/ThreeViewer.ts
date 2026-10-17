@@ -4,12 +4,17 @@ import { CircuitComponent, Wire } from '../types';
 import { WireRenderer } from './WireRenderer';
 import { createBaseDiorama, DioramaEnvironment } from './models/BaseDiorama';
 import { createBatteryMesh } from './models/BatteryModel';
+import { createBatteryPackMesh } from './models/BatteryPackModel';
 import { createBulbMesh, BulbObject } from './models/BulbModel';
 import { createSwitchMesh, SwitchObject } from './models/SwitchModel';
+import { createPushButtonMesh, PushButtonObject } from './models/PushButtonModel';
 import { createMotorFanMesh, MotorFanObject } from './models/MotorFanModel';
 import { createSolarPanelMesh, SolarPanelObject } from './models/SolarPanelModel';
 import { createWindTurbineMesh, WindTurbineObject } from './models/WindTurbineModel';
+import { createBuzzerMesh, BuzzerObject } from './models/BuzzerModel';
 import { createResistorMesh } from './models/ResistorModel';
+import { createPotentiometerMesh, PotentiometerObject } from './models/PotentiometerModel';
+import { createFuseMesh, FuseObject } from './models/FuseModel';
 import { createLedMesh, LedObject } from './models/LedModel';
 
 export interface ViewerCallbacks {
@@ -263,6 +268,15 @@ export class ThreeViewer {
           }
           return;
         }
+        if (obj.name.startsWith('button::')) {
+          e.stopPropagation();
+          const compId = obj.name.split('::')[1];
+          const pushMesh = this.componentMeshes.get(compId) as PushButtonObject;
+          if (pushMesh && pushMesh.toggleButton) {
+            pushMesh.toggleButton();
+          }
+          return;
+        }
         obj = obj.parent;
       }
     }
@@ -373,6 +387,9 @@ export class ThreeViewer {
           case 'battery':
             mesh = createBatteryMesh(comp);
             break;
+          case 'battery_pack':
+            mesh = createBatteryPackMesh(comp);
+            break;
           case 'bulb':
             mesh = createBulbMesh(comp);
             break;
@@ -380,6 +397,12 @@ export class ThreeViewer {
             mesh = createSwitchMesh(comp, (swComp) => {
               if (onSwitchToggle) onSwitchToggle(swComp);
               this.callbacks.onSwitchToggle?.(swComp);
+            });
+            break;
+          case 'push_button':
+            mesh = createPushButtonMesh(comp, (pbComp) => {
+              if (onSwitchToggle) onSwitchToggle(pbComp);
+              this.callbacks.onSwitchToggle?.(pbComp);
             });
             break;
           case 'motor':
@@ -392,8 +415,17 @@ export class ThreeViewer {
           case 'wind_turbine':
             mesh = createWindTurbineMesh(comp);
             break;
+          case 'buzzer':
+            mesh = createBuzzerMesh(comp);
+            break;
           case 'resistor':
             mesh = createResistorMesh(comp);
+            break;
+          case 'potentiometer':
+            mesh = createPotentiometerMesh(comp);
+            break;
+          case 'fuse':
+            mesh = createFuseMesh(comp);
             break;
           case 'led':
             mesh = createLedMesh(comp);
@@ -556,6 +588,12 @@ export class ThreeViewer {
             this.energyEnv.sunlight
           );
         }
+        if (typeof anyMesh.updateBuzzerState === 'function') {
+          const comp = this.currentComponents.find((c) => c.id === mesh.name);
+          if (comp) {
+            (anyMesh.updateBuzzerState as (c: CircuitComponent, dt: number) => void)(comp, delta);
+          }
+        }
       }
 
       // Animate flowing electric current particles
@@ -569,7 +607,7 @@ export class ThreeViewer {
   };
 
   /**
-   * Update component dynamic state meshes (bulbs, switches, motors)
+   * Update component dynamic state meshes (bulbs, switches, motors, buzzers, fuses, etc.)
    */
   public updateAllComponentStates(components: CircuitComponent[]) {
     components.forEach((comp) => {
@@ -582,6 +620,15 @@ export class ThreeViewer {
       }
       if (typeof anyMesh.updateSwitchState === 'function') {
         (anyMesh.updateSwitchState as (c: CircuitComponent) => void)(comp);
+      }
+      if (typeof anyMesh.updatePushButtonState === 'function') {
+        (anyMesh.updatePushButtonState as (c: CircuitComponent) => void)(comp);
+      }
+      if (typeof anyMesh.updateFuseState === 'function') {
+        (anyMesh.updateFuseState as (c: CircuitComponent) => void)(comp);
+      }
+      if (typeof anyMesh.updatePotentiometerState === 'function') {
+        (anyMesh.updatePotentiometerState as (c: CircuitComponent) => void)(comp);
       }
       if (typeof anyMesh.updateLedState === 'function') {
         (anyMesh.updateLedState as (c: CircuitComponent) => void)(comp);

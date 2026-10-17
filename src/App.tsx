@@ -269,7 +269,8 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!viewerRef.current) return;
     viewerRef.current.syncComponents(activeComponents, (sw) => {
-      handleToggleSwitch(sw.id);
+      if (sw.type === 'switch') handleToggleSwitch(sw.id);
+      if (sw.type === 'push_button') handleTogglePushButton(sw.id);
     });
     viewerRef.current.syncWires(wires, activeComponents);
     viewerRef.current.updateAllComponentStates(activeComponents);
@@ -296,6 +297,15 @@ export const App: React.FC = () => {
       return c?.type === 'motor' || c?.type === 'fan';
     });
     sounds.setMotorRunning(hasMotor, 0.6);
+
+    // Beep sound if any buzzer is powered
+    const hasActiveBuzzer = circuitAnalysis.poweredComponentIds.some((id) => {
+      const c = components.find((item) => item.id === id);
+      return c?.type === 'buzzer';
+    });
+    if (hasActiveBuzzer && circuitAnalysis.isClosedCircuit) {
+      sounds.playBuzzerBeep();
+    }
   }, [circuitAnalysis.isClosedCircuit, circuitAnalysis.isShortCircuit, circuitAnalysis.poweredComponentIds, components]);
 
   // Handle Switch Toggle
@@ -309,6 +319,59 @@ export const App: React.FC = () => {
           return {
             ...c,
             state: { ...c.state, isOpen: nextOpen },
+          };
+        }
+        return c;
+      })
+    );
+  }, [pushHistory]);
+
+  // Toggle Push Button
+  const handleTogglePushButton = useCallback((btnId: string) => {
+    pushHistory();
+    sounds.playClick();
+    setComponents((prev) =>
+      prev.map((c) => {
+        if (c.id === btnId && c.type === 'push_button') {
+          return {
+            ...c,
+            state: { ...c.state, isPressed: !c.state.isPressed },
+          };
+        }
+        return c;
+      })
+    );
+  }, [pushHistory]);
+
+  // Reset Blown Fuse
+  const handleResetFuse = useCallback((fuseId: string) => {
+    pushHistory();
+    sounds.playClick();
+    setComponents((prev) =>
+      prev.map((c) => {
+        if (c.id === fuseId && c.type === 'fuse') {
+          return {
+            ...c,
+            state: { ...c.state, isBlown: false },
+          };
+        }
+        return c;
+      })
+    );
+  }, [pushHistory]);
+
+  // Adjust Potentiometer Resistance
+  const handleAdjustPotentiometer = useCallback((potId: string, delta: number) => {
+    pushHistory();
+    sounds.playClick();
+    setComponents((prev) =>
+      prev.map((c) => {
+        if (c.id === potId && c.type === 'potentiometer') {
+          const curr = c.state.resistance ?? 50;
+          const next = Math.max(0, Math.min(200, curr + delta));
+          return {
+            ...c,
+            state: { ...c.state, resistance: next },
           };
         }
         return c;
@@ -612,6 +675,15 @@ export const App: React.FC = () => {
           }}
           onToggleSwitch={() => {
             if (selectedComponentId) handleToggleSwitch(selectedComponentId);
+          }}
+          onTogglePushButton={() => {
+            if (selectedComponentId) handleTogglePushButton(selectedComponentId);
+          }}
+          onResetFuse={() => {
+            if (selectedComponentId) handleResetFuse(selectedComponentId);
+          }}
+          onAdjustPotentiometer={(delta) => {
+            if (selectedComponentId) handleAdjustPotentiometer(selectedComponentId, delta);
           }}
           onDeselect={() => setSelectedComponentId(null)}
         />

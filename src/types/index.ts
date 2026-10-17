@@ -1,12 +1,17 @@
 export type ComponentType =
   | 'battery'
+  | 'battery_pack'
   | 'bulb'
   | 'switch'
+  | 'push_button'
   | 'motor'
   | 'fan'
   | 'solar_panel'
   | 'wind_turbine'
+  | 'buzzer'
   | 'resistor'
+  | 'potentiometer'
+  | 'fuse'
   | 'led';
 
 export type TerminalPolarity = 'positive' | 'negative' | 'neutral' | 'anode' | 'cathode';
@@ -20,12 +25,15 @@ export interface Terminal {
 
 export interface ComponentState {
   isOpen?: boolean; // For switch: true = open (off), false = closed (on)
-  voltage?: number; // In Volts (e.g., 1.5, 9)
+  isPressed?: boolean; // For push_button: true = pressed (closed), false = released (open)
+  isBlown?: boolean; // For fuse: true = blown (broken), false = intact (conducting)
+  voltage?: number; // In Volts (e.g., 1.5, 3.0, 9)
   resistance?: number; // In Ohms
   isLit?: boolean; // Bulb/LED active
   brightness?: number; // 0 to 1
   isSpinning?: boolean; // Motor/fan active
   speed?: number; // 0 to 1
+  isBeeping?: boolean; // Buzzer active
   sunlight?: number; // 0 to 1 (0% to 100%)
   windSpeed?: number; // 0 to 5 level
   energyOutput?: number; // Calculated generated power in Watts/Volts

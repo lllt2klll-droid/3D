@@ -11,6 +11,8 @@ import {
   Fan,
   Sun,
   Wind,
+  Bell,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface CircuitToolbarProps {
@@ -230,6 +232,24 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
         >
           <Wind size={15} color="#10b981" />
           <span>Tuabin Gió</span>
+        </button>
+
+        <button
+          className="btn-3d btn-neutral"
+          style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+          onClick={() => onLoadQuickTemplate('doorbell_buzzer')}
+        >
+          <Bell size={15} color="#8b5cf6" />
+          <span>Mạch Chuông</span>
+        </button>
+
+        <button
+          className="btn-3d btn-neutral"
+          style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+          onClick={() => onLoadQuickTemplate('fuse_protection')}
+        >
+          <ShieldCheck size={15} color="#ef4444" />
+          <span>Cầu Chì</span>
         </button>
 
         <button

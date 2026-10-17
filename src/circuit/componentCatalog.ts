@@ -198,4 +198,114 @@ export const COMPONENT_CATALOG: Record<ComponentType, ComponentCatalogItem> = {
       { id: 'cathode', label: '−', polarity: 'cathode', relativePosition: [0.25, 0.2, 0] },
     ],
   },
+
+  battery_pack: {
+    type: 'battery_pack',
+    name: 'Hộp 2 Pin 3V',
+    vietnameseName: 'Bộ nguồn 2 Pin mắc nối tiếp',
+    iconName: 'BatteryCharging',
+    category: 'source',
+    shortDesc: 'Cung cấp nguồn điện 3V mạnh gấp đôi pin đơn.',
+    fullDesc:
+      'Hộp 2 viên pin AA được mắc nối tiếp với nhau. Cực âm của viên pin thứ nhất nối với cực dương của viên pin thứ hai, làm tổng điện áp tăng lên: 1.5V + 1.5V = 3V!',
+    howItWorks:
+      'Khi mắc nối tiếp hai nguồn điện, năng lượng đẩy electron của hai viên pin cộng gộp lại, tạo ra điện áp lớn hơn giúp bóng đèn sáng rực rỡ và động cơ quay tít hơn.',
+    funFact:
+      'Chiếc điều khiển tivi ở nhà em thường dùng 2 viên pin AA hoặc AAA mắc nối tiếp để đạt điện áp 3V đấy!',
+    challengeQuestion: 'Nếu lắp ngược cực 1 trong 2 viên pin trong hộp thì điều gì sẽ xảy ra?',
+    specs: 'Điện áp: 3.0V DC (2x 1.5V AA) | Mắc nối tiếp',
+    defaultState: { voltage: 3.0 },
+    terminals: [
+      { id: 'pos', label: '+', polarity: 'positive', relativePosition: [0.65, 0.28, 0.32] },
+      { id: 'neg', label: '−', polarity: 'negative', relativePosition: [-0.65, 0.28, -0.32] },
+    ],
+  },
+
+  push_button: {
+    type: 'push_button',
+    name: 'Nút bấm chuông',
+    vietnameseName: 'Công tắc nút nhấn (Nhấn nhả)',
+    iconName: 'Radio',
+    category: 'control',
+    shortDesc: 'Nhấn giữ để đóng mạch, nhả tay ra để ngắt mạch.',
+    fullDesc:
+      'Khác với công tắc gạt dao (gạt xong giữ nguyên vị trí), nút bấm có lò xo đàn hồi bên trong. Khi em nhấn ngón tay xuống, hai tiếp điểm chạm nhau làm mạch kín; khi buông tay, lò xo đẩy nút lên làm mạch hở ngay lập tức.',
+    howItWorks:
+      'Dùng trong chuông cửa nhà hoặc phím bấm còi xe: chỉ khi nào người dùng nhấn giữ nút thì chuông/còi mới kêu, buông tay là dừng lại.',
+    funFact:
+      'Bàn phím máy tính em đang gõ cũng gồm hàng trăm chiếc nút bấm tí hon hoạt động theo nguyên lý này!',
+    challengeQuestion: 'Tại sao chuông cửa lại dùng nút bấm nhấn nhả mà không dùng công tắc gạt giữ nguyên?',
+    specs: 'Loại: Nút ấn Momentary | Tải tối đa: 12V 1A',
+    defaultState: { isPressed: false },
+    terminals: [
+      { id: 't1', label: '1', polarity: 'neutral', relativePosition: [-0.45, 0.2, 0] },
+      { id: 't2', label: '2', polarity: 'neutral', relativePosition: [0.45, 0.2, 0] },
+    ],
+  },
+
+  buzzer: {
+    type: 'buzzer',
+    name: 'Còi báo động',
+    vietnameseName: 'Còi chip / Chuông điện Piezo',
+    iconName: 'Volume2',
+    category: 'load',
+    shortDesc: 'Phát ra âm thanh tiếng kêu bíp bíp vui tai khi có điện.',
+    fullDesc:
+      'Còi báo động sử dụng đĩa gốm thạch anh áp điện (piezoelectric) hoặc màng loa điện từ tí hon. Khi dòng điện đi qua, màng loa rung động cực nhanh trong không khí tạo nên sóng âm thanh phát ra tiếng bíp.',
+    howItWorks:
+      'Còi có phân biệt cực: dây dương (+) nối vào cực dương còi, dây âm (-) nối về cực âm. Khi mạch kín, còi rung liên tục phát tiếng kêu cảnh báo.',
+    funFact:
+      'Tiếng bíp bíp khi lò vi sóng nấu xong hay khi máy quét mã vạch ở siêu thị kêu "tít" đều do chiếc còi nhỏ này phát ra đấy!',
+    challengeQuestion: 'Em có thể kết hợp Nút bấm và Còi báo để làm mô hình chiếc chuông cửa không?',
+    specs: 'Tần số âm thanh: 880Hz (Nốt La) | Âm lượng: 80dB',
+    defaultState: { isBeeping: false },
+    terminals: [
+      { id: 'pos', label: '+', polarity: 'positive', relativePosition: [0.45, 0.2, 0] },
+      { id: 'neg', label: '−', polarity: 'negative', relativePosition: [-0.45, 0.2, 0] },
+    ],
+  },
+
+  potentiometer: {
+    type: 'potentiometer',
+    name: 'Biến trở xoay',
+    vietnameseName: 'Chiết áp / Núm vặn điều tốc',
+    iconName: 'SlidersHorizontal',
+    category: 'passive',
+    shortDesc: 'Vặn núm để tăng giảm độ sáng đèn hoặc tốc độ quạt.',
+    fullDesc:
+      'Biến trở là một điện trở có thể thay đổi trị số bằng cách xoay núm vặn. Bên trong có một con chạy trượt trên dải vật liệu dẫn điện: vặn núm làm thay đổi chiều dài đoạn đường dòng điện đi qua.',
+    howItWorks:
+      'Đường đi càng ngắn -> Điện trở càng nhỏ -> Dòng điện qua càng mạnh (đèn sáng hơn). Đường đi càng dài -> Điện trở càng lớn -> Dòng điện yếu đi (đèn mờ đi).',
+    funFact:
+      'Núm vặn chỉnh âm lượng to nhỏ trên loa đài chính là một chiếc biến trở xoay như thế này!',
+    challengeQuestion: 'Muốn chiếc quạt quay nhanh nhất, em nên vặn biến trở về mức điện trở lớn hay nhỏ?',
+    specs: 'Dải điện trở: 0 - 200 Ohm | Góc xoay: 270 độ',
+    defaultState: { resistance: 50 },
+    terminals: [
+      { id: 't1', label: '1', polarity: 'neutral', relativePosition: [-0.5, 0.2, 0] },
+      { id: 't2', label: '2', polarity: 'neutral', relativePosition: [0.5, 0.2, 0] },
+    ],
+  },
+
+  fuse: {
+    type: 'fuse',
+    name: 'Cầu chì an toàn',
+    vietnameseName: 'Cầu chì ống bảo vệ quá tải',
+    iconName: 'ShieldCheck',
+    category: 'control',
+    shortDesc: 'Tự động đứt dây khi chập mạch để bảo vệ toàn bộ hệ thống.',
+    fullDesc:
+      'Cầu chì là thiết bị bảo vệ an toàn quan trọng nhất trong mọi mạch điện. Bên trong ống thủy tinh có sợi dây chì mảnh với nhiệt độ nóng chảy thấp.',
+    howItWorks:
+      'Khi xảy ra hiện tượng chập mạch (đoản mạch), dòng điện tăng vọt cực lớn làm sợi dây chì nóng rực và đứt lìa ngay lập tức. Mạch điện bị ngắt, cứu pin khỏi bị nổ và ngăn ngừa cháy nhà!',
+    funFact:
+      'Trong hộp cầu chì gia đình và trên xe ô tô luôn có hàng chục chiếc cầu chì để bảo vệ các thiết bị đắt tiền.',
+    challengeQuestion: 'Tại sao khi cầu chì bị đứt, chúng ta tuyệt đối không được dùng sợi dây đồng dày để thay thế?',
+    specs: 'Dòng điện định mức: 1.0A | Ống thủy tinh bảo vệ',
+    defaultState: { isBlown: false },
+    terminals: [
+      { id: 't1', label: '1', polarity: 'neutral', relativePosition: [-0.55, 0.2, 0] },
+      { id: 't2', label: '2', polarity: 'neutral', relativePosition: [0.55, 0.2, 0] },
+    ],
+  },
 };

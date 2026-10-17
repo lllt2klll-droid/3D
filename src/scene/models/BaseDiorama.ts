@@ -77,21 +77,21 @@ export function createBaseDiorama(): DioramaEnvironment {
   trimMesh.receiveShadow = true;
   group.add(trimMesh);
 
-  // Subtle clean grid helper on the work surface for easy alignment
+  // Subtle clean grid helper resting directly on the work surface (no floating!)
   const gridHelper = new THREE.GridHelper(8.0, 16, 0x0284c7, 0xcbd5e1);
-  gridHelper.position.y = 0.26;
-  (gridHelper.material as THREE.Material).opacity = 0.45;
+  gridHelper.position.y = 0.003;
+  (gridHelper.material as THREE.Material).opacity = 0.35;
   (gridHelper.material as THREE.Material).transparent = true;
   group.add(gridHelper);
 
-  // Corner Accent Markers (4 sleek modern corner pads)
+  // Corner Accent Markers resting on table surface
   const cornerGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.02, 16);
   const cornerMat = MATERIALS.plasticLightBlue;
   const corners = [
-    [-3.8, 0.26, -3.0],
-    [3.8, 0.26, -3.0],
-    [-3.8, 0.26, 3.0],
-    [3.8, 0.26, 3.0],
+    [-3.8, 0.01, -3.0],
+    [3.8, 0.01, -3.0],
+    [-3.8, 0.01, 3.0],
+    [3.8, 0.01, 3.0],
   ];
   corners.forEach(([cx, cy, cz]) => {
     const pad = new THREE.Mesh(cornerGeo, cornerMat);

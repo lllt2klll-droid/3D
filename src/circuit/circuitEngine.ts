@@ -21,6 +21,9 @@ export function isSource(component: CircuitComponent): boolean {
   if (component.type === 'battery') {
     return (component.state.voltage ?? 1.5) > 0;
   }
+  if (component.type === 'battery_pack') {
+    return (component.state.voltage ?? 3.0) > 0;
+  }
   if (component.type === 'solar_panel') {
     return (component.state.sunlight ?? 0) >= 0.2;
   }
@@ -38,7 +41,9 @@ export function isLoad(component: CircuitComponent): boolean {
     component.type === 'bulb' ||
     component.type === 'motor' ||
     component.type === 'fan' ||
+    component.type === 'buzzer' ||
     component.type === 'resistor' ||
+    component.type === 'potentiometer' ||
     component.type === 'led'
   );
 }
@@ -86,6 +91,16 @@ export function analyzeCircuit(
     if (c.type === 'switch') {
       // Conducts only when switch is CLOSED (!isOpen)
       if (c.state.isOpen === false) {
+        addEdge(termKey(c.id, c.terminals[0].id), termKey(c.id, c.terminals[1].id));
+      }
+    } else if (c.type === 'push_button') {
+      // Conducts only when push_button is PRESSED
+      if (c.state.isPressed === true) {
+        addEdge(termKey(c.id, c.terminals[0].id), termKey(c.id, c.terminals[1].id));
+      }
+    } else if (c.type === 'fuse') {
+      // Conducts only when fuse is NOT blown
+      if (!c.state.isBlown) {
         addEdge(termKey(c.id, c.terminals[0].id), termKey(c.id, c.terminals[1].id));
       }
     } else if (isLoad(c)) {
@@ -162,8 +177,20 @@ export function analyzeCircuit(
         });
 
         if (loadCount === 0) {
-          // Dangerous short circuit! Positive connected directly to negative with 0 loads
-          shortCircuitFound = true;
+          // Check if there is an intact fuse in this short-circuit path
+          const fuseId = Array.from(compsInPath).find((id) => {
+            const comp = compMap.get(id);
+            return comp?.type === 'fuse' && !comp.state.isBlown;
+          });
+
+          if (fuseId) {
+            // The fuse blows and breaks the circuit, protecting against hazard!
+            const fuse = compMap.get(fuseId)!;
+            fuse.state.isBlown = true;
+          } else {
+            // Dangerous short circuit! Positive connected directly to negative with 0 loads
+            shortCircuitFound = true;
+          }
         } else {
           activeLoops.push(Array.from(compsInPath));
           compsInPath.forEach((id) => poweredCompSet.add(id));
@@ -229,6 +256,12 @@ export function analyzeCircuit(
     if (poweredLoads.some((l) => l?.type === 'motor' || l?.type === 'fan')) {
       desc += 'Động cơ điện đang quay làm cánh quạt chuyển động! ';
     }
+    if (poweredLoads.some((l) => l?.type === 'buzzer')) {
+      desc += 'Còi báo động đang phát tiếng kêu bíp bíp! ';
+    }
+    if (poweredLoads.some((l) => l?.type === 'led')) {
+      desc += 'Đèn LED bán dẫn đang phát sáng! ';
+    }
 
     return {
       isClosedCircuit: true,
@@ -245,6 +278,8 @@ export function analyzeCircuit(
 
   // Pedagogical diagnosing why circuit is open
   const openSwitches = components.filter((c) => c.type === 'switch' && c.state.isOpen !== false);
+  const openButtons = components.filter((c) => c.type === 'push_button' && !c.state.isPressed);
+  const blownFuses = components.filter((c) => c.type === 'fuse' && c.state.isBlown);
   const partiallyConnected = components.filter((c) => {
     const cWires = wires.filter(
       (w) => w.fromComponentId === c.id || w.toComponentId === c.id
@@ -255,7 +290,13 @@ export function analyzeCircuit(
   let hint = 'Mạch điện đang bị hở (chưa khép kín), dòng điện chưa thể lưu thông.';
   let msg = 'Mạch điện hở – Thiết bị chưa hoạt động.';
 
-  if (openSwitches.length > 0) {
+  if (blownFuses.length > 0) {
+    hint = 'Cầu chì đã tự đứt để bảo vệ mạch khỏi nguy cơ chập cháy! Em hãy gỡ đoạn chập mạch và thay cầu chì mới nhé.';
+    msg = 'Cầu chì đã tự ngắt bảo vệ an toàn.';
+  } else if (openButtons.length > 0) {
+    hint = 'Nút bấm đang ở trạng thái thả (chưa nhấn). Hãy bấm giữ nút để đóng mạch (chuông/đèn hoạt động)!';
+    msg = 'Nút bấm chưa được nhấn – Mạch đang hở.';
+  } else if (openSwitches.length > 0) {
     hint =
       'Công tắc đang ở trạng thái MỞ (ngắt điện). Em hãy bấm vào cần gạt công tắc để ĐÓNG mạch lại nhé!';
     msg = 'Công tắc đang mở (OFF) – Mạch bị ngắt tại công tắc.';
@@ -297,6 +338,8 @@ export function updateComponentStates(
     } else if (comp.type === 'motor' || comp.type === 'fan') {
       updatedState.isSpinning = isPowered;
       updatedState.speed = isPowered ? 1.0 : 0.0;
+    } else if (comp.type === 'buzzer') {
+      updatedState.isBeeping = isPowered;
     } else if (comp.type === 'led') {
       updatedState.isLit = isPowered;
     }

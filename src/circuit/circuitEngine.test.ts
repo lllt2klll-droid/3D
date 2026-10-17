@@ -229,4 +229,86 @@ console.log('--- BẮT ĐẦU KIỂM THỬ HỆ THỐNG MẠCH ĐIỆN STEM 3D -
   assert(!resCalm.isClosedCircuit, 'Khi lặng gió (cấp 0), tuabin không phát điện');
 }
 
-console.log('\n🎉 TẤT CẢ 7 BỘ TEST MẠCH ĐIỆN ĐÃ VƯỢT QUA 100%!');
+// Test 8: Push Button & Buzzer (Doorbell circuit)
+{
+  const pack = createComponent('battery_pack', 'pack-1', [-1, 0, 0]);
+  const btn = createComponent('push_button', 'btn-1', [0, 0, 0], { isPressed: false });
+  const buzzer = createComponent('buzzer', 'buzzer-1', [1, 0, 0]);
+
+  const wires: Wire[] = [
+    {
+      id: 'w1',
+      fromComponentId: 'pack-1',
+      fromTerminalId: 'pos',
+      toComponentId: 'btn-1',
+      toTerminalId: 't1',
+      color: 'red',
+      hasCurrent: false,
+      currentDirection: 1,
+    },
+    {
+      id: 'w2',
+      fromComponentId: 'btn-1',
+      toComponentId: 'buzzer-1',
+      fromTerminalId: 't2',
+      toTerminalId: 'pos',
+      color: 'red',
+      hasCurrent: false,
+      currentDirection: 1,
+    },
+    {
+      id: 'w3',
+      fromComponentId: 'buzzer-1',
+      toComponentId: 'pack-1',
+      fromTerminalId: 'neg',
+      toTerminalId: 'neg',
+      color: 'black',
+      hasCurrent: false,
+      currentDirection: 1,
+    },
+  ];
+
+  // Button released -> Circuit open
+  const resOpen = analyzeCircuit([pack, btn, buzzer], wires);
+  assert(!resOpen.isClosedCircuit, 'Khi nút bấm chưa nhấn, mạch chuông phải hở');
+
+  // Button pressed -> Circuit closed, buzzer sounds
+  btn.state.isPressed = true;
+  const resPressed = analyzeCircuit([pack, btn, buzzer], wires);
+  assert(resPressed.isClosedCircuit, 'Khi nhấn nút bấm, mạch chuông phải kín hoàn toàn');
+  assert(resPressed.poweredComponentIds.includes('buzzer-1'), 'Còi báo động được cấp điện');
+}
+
+// Test 9: Safety Fuse Protection on Short Circuit
+{
+  const bat = createComponent('battery', 'bat-1', [-1, 0, 0]);
+  const fuse = createComponent('fuse', 'fuse-1', [0, 0, 0], { isBlown: false });
+
+  const shortWires: Wire[] = [
+    {
+      id: 'w1',
+      fromComponentId: 'bat-1',
+      fromTerminalId: 'pos',
+      toComponentId: 'fuse-1',
+      toTerminalId: 't1',
+      color: 'red',
+      hasCurrent: false,
+      currentDirection: 1,
+    },
+    {
+      id: 'w2',
+      fromComponentId: 'fuse-1',
+      fromTerminalId: 't2',
+      toComponentId: 'bat-1',
+      toTerminalId: 'neg',
+      color: 'black',
+      hasCurrent: false,
+      currentDirection: 1,
+    },
+  ];
+
+  const resShort = analyzeCircuit([bat, fuse], shortWires);
+  assert(!!fuse.state.isBlown, 'Khi xảy ra chập mạch qua cầu chì, cầu chì phải tự đứt để bảo vệ mạch');
+}
+
+console.log('\n🎉 TẤT CẢ 9 BỘ TEST MẠCH ĐIỆN ĐÃ VƯỢT QUA 100%!');

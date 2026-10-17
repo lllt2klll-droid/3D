@@ -13,6 +13,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Hand,
+  Radio,
+  RotateCcw,
 } from 'lucide-react';
 
 interface ComponentActionWidgetProps {
@@ -22,6 +24,9 @@ interface ComponentActionWidgetProps {
   onDelete: () => void;
   onInspect: () => void;
   onToggleSwitch?: () => void;
+  onTogglePushButton?: () => void;
+  onResetFuse?: () => void;
+  onAdjustPotentiometer?: (delta: number) => void;
   onDeselect: () => void;
 }
 
@@ -32,6 +37,9 @@ export const ComponentActionWidget: React.FC<ComponentActionWidgetProps> = ({
   onDelete,
   onInspect,
   onToggleSwitch,
+  onTogglePushButton,
+  onResetFuse,
+  onAdjustPotentiometer,
   onDeselect,
 }) => {
   if (!component) return null;
@@ -282,6 +290,111 @@ export const ComponentActionWidget: React.FC<ComponentActionWidgetProps> = ({
           <ToggleLeft size={16} />
           <span>{component.state.isOpen ? 'Gạt ĐÓNG công tắc' : 'Gạt MỞ công tắc'}</span>
         </button>
+      )}
+
+      {/* Push Button Toggle (If Push Button) */}
+      {component.type === 'push_button' && onTogglePushButton && (
+        <button
+          className={`btn-3d ${component.state.isPressed ? 'btn-danger' : 'btn-success'}`}
+          style={{
+            padding: '8px 12px',
+            fontSize: '0.85rem',
+            width: '100%',
+            justifyContent: 'center',
+          }}
+          onClick={onTogglePushButton}
+        >
+          <Radio size={16} />
+          <span>{component.state.isPressed ? 'Thả nút bấm (Ngắt điện)' : 'Nhấn GIỮ nút (Đóng điện)'}</span>
+        </button>
+      )}
+
+      {/* Fuse Safety Status & Reset (If Fuse) */}
+      {component.type === 'fuse' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div
+            style={{
+              padding: '6px 10px',
+              borderRadius: '10px',
+              backgroundColor: component.state.isBlown ? '#fee2e2' : '#dcfce7',
+              color: component.state.isBlown ? '#b91c1c' : '#15803d',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              textAlign: 'center',
+            }}
+          >
+            {component.state.isBlown ? '⚠️ CẦU CHÌ ĐÃ ĐỨT BẢO VỆ!' : '✅ Cầu chì nguyên vẹn (1.0A)'}
+          </div>
+          {component.state.isBlown && onResetFuse && (
+            <button
+              className="btn-3d btn-primary"
+              style={{
+                padding: '7px 12px',
+                fontSize: '0.82rem',
+                width: '100%',
+                justifyContent: 'center',
+              }}
+              onClick={onResetFuse}
+            >
+              <RotateCcw size={15} />
+              <span>Thay cầu chì mới</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Potentiometer Dial Controls (If Potentiometer) */}
+      {component.type === 'potentiometer' && onAdjustPotentiometer && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+            backgroundColor: '#f1f5f9',
+            padding: '8px 10px',
+            borderRadius: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
+            <span>Trị số chiết áp:</span>
+            <span style={{ color: '#0284c7' }}>{component.state.resistance ?? 50} Ω</span>
+          </div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              className="btn-3d btn-neutral"
+              style={{ flex: 1, padding: '5px', fontSize: '0.75rem' }}
+              onClick={() => onAdjustPotentiometer(-25)}
+              title="Giảm điện trở -> Tăng dòng điện (Đèn sáng hơn)"
+            >
+              − Giảm (Sáng)
+            </button>
+            <button
+              className="btn-3d btn-neutral"
+              style={{ flex: 1, padding: '5px', fontSize: '0.75rem' }}
+              onClick={() => onAdjustPotentiometer(25)}
+              title="Tăng điện trở -> Giảm dòng điện (Đèn mờ đi)"
+            >
+              + Tăng (Mờ)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Buzzer Sound Indicator (If Buzzer) */}
+      {component.type === 'buzzer' && (
+        <div
+          style={{
+            padding: '6px 10px',
+            borderRadius: '10px',
+            backgroundColor: component.state.isBeeping ? '#e0f2fe' : '#f8fafc',
+            color: component.state.isBeeping ? '#0369a1' : '#64748b',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            textAlign: 'center',
+          }}
+        >
+          {component.state.isBeeping ? '🔊 Đang kêu bíp bíp liên tục!' : '🔇 Đang tắt (chờ mạch kín)'}
+        </div>
       )}
 
       {/* Bottom Actions: Inspect & Delete */}
