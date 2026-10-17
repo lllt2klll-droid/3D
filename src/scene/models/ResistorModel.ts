@@ -49,7 +49,7 @@ export function createResistorMesh(comp: CircuitComponent): THREE.Group {
   rightLead.position.set(0.45, 0.25, 0);
   group.add(rightLead);
 
-  // Terminals
+  // Terminals — WITH hitBox for reliable clicking
   comp.terminals.forEach((term) => {
     const postGroup = new THREE.Group();
     postGroup.name = `terminal::${comp.id}::${term.id}`;
@@ -65,7 +65,15 @@ export function createResistorMesh(comp: CircuitComponent): THREE.Group {
     capMesh.position.y = 0.09;
     postGroup.add(capMesh);
 
-    const haloGeo = new THREE.RingGeometry(0.12, 0.18, 16);
+    // ✅ Invisible hitbox for reliable click/touch
+    const hitBox = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 8, 8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.name = `terminal::${comp.id}::${term.id}`;
+    postGroup.add(hitBox);
+
+    const haloGeo = new THREE.RingGeometry(0.12, 0.20, 16);
     const haloMesh = new THREE.Mesh(haloGeo, MATERIALS.terminalHighlight);
     haloMesh.rotation.x = -Math.PI / 2;
     haloMesh.position.y = 0.12;

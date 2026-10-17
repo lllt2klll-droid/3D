@@ -20,7 +20,7 @@ export function createLedMesh(comp: CircuitComponent): LedObject {
   baseMesh.receiveShadow = true;
   group.add(baseMesh);
 
-  // LED Epoxy Dome
+  // LED Epoxy Dome (clone material so each LED has independent emissive state)
   const domeMat = new THREE.MeshPhysicalMaterial({
     color: 0xef4444,
     transparent: true,
@@ -44,14 +44,29 @@ export function createLedMesh(comp: CircuitComponent): LedObject {
   ledLight.position.set(0, 0.45, 0);
   group.add(ledLight);
 
-  // Terminals (+ Anode, - Cathode)
+  // Outer soft glow aura
+  const glowGeo = new THREE.SphereGeometry(0.32, 12, 12);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0xff2222,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+  });
+  const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+  glowMesh.position.y = 0.45;
+  group.add(glowMesh);
+
+  // Terminals (+ Anode, - Cathode) — with hitBox for reliable clicking
   comp.terminals.forEach((term) => {
     const postGroup = new THREE.Group();
     postGroup.name = `terminal::${comp.id}::${term.id}`;
     postGroup.position.set(...term.relativePosition);
 
     const pGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.16, 16);
-    const pMesh = new THREE.Mesh(pGeo, term.polarity === 'anode' ? MATERIALS.terminalPositive : MATERIALS.terminalNegative);
+    const pMesh = new THREE.Mesh(
+      pGeo,
+      term.polarity === 'anode' ? MATERIALS.terminalPositive : MATERIALS.terminalNegative
+    );
     pMesh.castShadow = true;
     postGroup.add(pMesh);
 
@@ -60,7 +75,15 @@ export function createLedMesh(comp: CircuitComponent): LedObject {
     capMesh.position.y = 0.09;
     postGroup.add(capMesh);
 
-    const haloGeo = new THREE.RingGeometry(0.12, 0.18, 16);
+    // ✅ Invisible hitbox for reliable click/touch interaction
+    const hitBox = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 8, 8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.name = `terminal::${comp.id}::${term.id}`;
+    postGroup.add(hitBox);
+
+    const haloGeo = new THREE.RingGeometry(0.12, 0.20, 16);
     const haloMesh = new THREE.Mesh(haloGeo, MATERIALS.terminalHighlight);
     haloMesh.rotation.x = -Math.PI / 2;
     haloMesh.position.y = 0.12;
@@ -76,6 +99,7 @@ export function createLedMesh(comp: CircuitComponent): LedObject {
     ledLight.intensity = THREE.MathUtils.lerp(ledLight.intensity, isLit ? 2.5 : 0, 0.2);
     domeMat.emissive.setHex(isLit ? 0xff2222 : 0x000000);
     domeMat.emissiveIntensity = isLit ? 1.5 : 0;
+    glowMat.opacity = THREE.MathUtils.lerp(glowMat.opacity, isLit ? 0.4 : 0, 0.2);
   };
 
   return group;

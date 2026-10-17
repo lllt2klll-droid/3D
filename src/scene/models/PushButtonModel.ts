@@ -24,7 +24,7 @@ export function createPushButtonMesh(
   baseMesh.receiveShadow = true;
   group.add(baseMesh);
 
-  // Raised collar ring housing (Yellow/gray plastic collar)
+  // Raised collar ring housing (Yellow plastic collar)
   const collarGeo = new THREE.CylinderGeometry(0.35, 0.38, 0.16, 24);
   const collarMesh = new THREE.Mesh(collarGeo, MATERIALS.plasticYellow);
   collarMesh.position.y = 0.2;
@@ -50,7 +50,7 @@ export function createPushButtonMesh(
 
   group.add(plungerGroup);
 
-  // Terminal connection posts
+  // Terminal connection posts — WITH hitBox for reliable clicking
   comp.terminals.forEach((term) => {
     const postGroup = new THREE.Group();
     postGroup.name = `terminal::${comp.id}::${term.id}`;
@@ -70,16 +70,18 @@ export function createPushButtonMesh(
     postTop.position.y = 0.14;
     postGroup.add(postTop);
 
-    // Glowing selection halo
-    const haloGeo = new THREE.TorusGeometry(0.16, 0.03, 8, 20);
-    const haloMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.9,
-    });
-    const haloMesh = new THREE.Mesh(haloGeo, haloMat);
-    haloMesh.rotation.x = Math.PI / 2;
-    haloMesh.position.y = 0.14;
+    // ✅ Invisible hitbox for reliable click/touch
+    const hitBox = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 8, 8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.name = `terminal::${comp.id}::${term.id}`;
+    postGroup.add(hitBox);
+
+    const haloGeo = new THREE.RingGeometry(0.14, 0.24, 20);
+    const haloMesh = new THREE.Mesh(haloGeo, MATERIALS.terminalHighlight);
+    haloMesh.rotation.x = -Math.PI / 2;
+    haloMesh.position.y = 0.16;
     haloMesh.name = `halo::${comp.id}::${term.id}`;
     haloMesh.visible = false;
     postGroup.add(haloMesh);
@@ -91,6 +93,8 @@ export function createPushButtonMesh(
     const isPressed = !!updatedComp.state.isPressed;
     // Visually depress button when pressed
     plungerGroup.position.y = isPressed ? 0.21 : 0.28;
+    // Color feedback: brighter red when pressed
+    (capMesh.material as THREE.MeshStandardMaterial).emissive?.setHex(isPressed ? 0x441111 : 0x000000);
   };
 
   group.toggleButton = () => {

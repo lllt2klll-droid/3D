@@ -12,7 +12,7 @@ export function createFuseMesh(comp: CircuitComponent): FuseObject {
   group.name = comp.id;
   group.position.set(...comp.position);
 
-  // Insulated base holder with soft rounded edges (White/light cyan plastic)
+  // Insulated base holder with soft rounded edges
   const baseGeo = new RoundedBoxGeometry(1.5, 0.12, 0.7, 4, 0.05);
   const baseMesh = new THREE.Mesh(baseGeo, MATERIALS.plasticLightBlue);
   baseMesh.position.y = 0.06;
@@ -20,7 +20,7 @@ export function createFuseMesh(comp: CircuitComponent): FuseObject {
   baseMesh.receiveShadow = true;
   group.add(baseMesh);
 
-  // Two mounting clips for fuse (Silver spring clips with rounded corners)
+  // Two mounting clips for fuse (Silver spring clips)
   const clipMat = MATERIALS.metalSilver;
   const clipGeo = new RoundedBoxGeometry(0.12, 0.22, 0.24, 2, 0.03);
   const leftClip = new THREE.Mesh(clipGeo, clipMat);
@@ -39,17 +39,23 @@ export function createFuseMesh(comp: CircuitComponent): FuseObject {
   group.add(glassMesh);
 
   // Metal end caps on fuse tube
-  const leftCap = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.16, 20), MATERIALS.metalSilver);
+  const leftCap = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.145, 0.145, 0.16, 20),
+    MATERIALS.metalSilver
+  );
   leftCap.rotation.z = Math.PI / 2;
   leftCap.position.set(-0.38, 0.25, 0);
   group.add(leftCap);
 
-  const rightCap = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.16, 20), MATERIALS.metalSilver);
+  const rightCap = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.145, 0.145, 0.16, 20),
+    MATERIALS.metalSilver
+  );
   rightCap.rotation.z = Math.PI / 2;
   rightCap.position.set(0.38, 0.25, 0);
   group.add(rightCap);
 
-  // Internal lead wire filament
+  // Internal lead wire filament (own material instance for state changes)
   const wireGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.6, 12);
   const wireMat = new THREE.MeshStandardMaterial({
     color: 0x94a3b8,
@@ -71,7 +77,7 @@ export function createFuseMesh(comp: CircuitComponent): FuseObject {
   blownGlow.position.set(0, 0.25, 0);
   group.add(blownGlow);
 
-  // Terminal connection posts
+  // Terminal connection posts — WITH hitBox for reliable clicking
   comp.terminals.forEach((term) => {
     const postGroup = new THREE.Group();
     postGroup.name = `terminal::${comp.id}::${term.id}`;
@@ -91,16 +97,18 @@ export function createFuseMesh(comp: CircuitComponent): FuseObject {
     postTop.position.y = 0.14;
     postGroup.add(postTop);
 
-    // Glowing selection halo
-    const haloGeo = new THREE.TorusGeometry(0.16, 0.03, 8, 20);
-    const haloMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.9,
-    });
-    const haloMesh = new THREE.Mesh(haloGeo, haloMat);
-    haloMesh.rotation.x = Math.PI / 2;
-    haloMesh.position.y = 0.14;
+    // ✅ Invisible hitbox for reliable click/touch
+    const hitBox = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 8, 8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.name = `terminal::${comp.id}::${term.id}`;
+    postGroup.add(hitBox);
+
+    const haloGeo = new THREE.RingGeometry(0.14, 0.24, 20);
+    const haloMesh = new THREE.Mesh(haloGeo, MATERIALS.terminalHighlight);
+    haloMesh.rotation.x = -Math.PI / 2;
+    haloMesh.position.y = 0.16;
     haloMesh.name = `halo::${comp.id}::${term.id}`;
     haloMesh.visible = false;
     postGroup.add(haloMesh);
@@ -113,7 +121,7 @@ export function createFuseMesh(comp: CircuitComponent): FuseObject {
     if (isBlown) {
       wireMat.color.setHex(0x334155);
       blownGlowMat.opacity = 0.9;
-      filamentMesh.scale.set(0.2, 0.2, 0.2); // Broken wire
+      filamentMesh.scale.set(0.2, 0.2, 0.2); // Broken wire visual
     } else {
       wireMat.color.setHex(0x94a3b8);
       blownGlowMat.opacity = 0.0;

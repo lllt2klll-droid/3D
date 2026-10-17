@@ -664,51 +664,35 @@ export class ThreeViewer {
       // Update dynamic states of components
       for (const mesh of this.componentMeshes.values()) {
         const anyMesh = mesh as unknown as Record<string, unknown>;
+        const realComp = this.currentComponents.find((c) => c.id === mesh.name);
+
         if (typeof anyMesh.updateMotorState === 'function') {
-          const compId = mesh.name;
-          const fakeComp = {
-            id: compId,
-            type: 'fan',
-            name: '',
-            position: [0, 0, 0],
-            state: { isSpinning: (mesh.userData as Record<string, unknown>)?.isSpinning ?? true, speed: 1.0 },
-            terminals: [],
-          } as unknown as CircuitComponent;
-          (anyMesh.updateMotorState as (comp: CircuitComponent, dt: number) => void)(fakeComp, delta);
+          // ✅ Use real component state — respects actual isSpinning from circuit analysis
+          if (realComp) {
+            (anyMesh.updateMotorState as (comp: CircuitComponent, dt: number) => void)(realComp, delta);
+          }
         }
         if (typeof anyMesh.updateTurbineState === 'function') {
-          const fakeComp = {
-            id: mesh.name,
-            type: 'wind_turbine',
-            name: '',
-            position: [0, 0, 0],
-            state: {},
-            terminals: [],
-          } as unknown as CircuitComponent;
+          const turbComp = realComp ?? ({
+            id: mesh.name, type: 'wind_turbine', name: '', position: [0, 0, 0] as [number, number, number],
+            state: {}, terminals: [],
+          } as CircuitComponent);
           (anyMesh.updateTurbineState as (comp: CircuitComponent, speed: number, dt: number) => void)(
-            fakeComp,
-            this.energyEnv.windSpeed,
-            delta
+            turbComp, this.energyEnv.windSpeed, delta
           );
         }
         if (typeof anyMesh.updateSolarState === 'function') {
-          const fakeComp = {
-            id: mesh.name,
-            type: 'solar_panel',
-            name: '',
-            position: [0, 0, 0],
-            state: {},
-            terminals: [],
-          } as unknown as CircuitComponent;
+          const solarComp = realComp ?? ({
+            id: mesh.name, type: 'solar_panel', name: '', position: [0, 0, 0] as [number, number, number],
+            state: {}, terminals: [],
+          } as CircuitComponent);
           (anyMesh.updateSolarState as (comp: CircuitComponent, sun: number) => void)(
-            fakeComp,
-            this.energyEnv.sunlight
+            solarComp, this.energyEnv.sunlight
           );
         }
         if (typeof anyMesh.updateBuzzerState === 'function') {
-          const comp = this.currentComponents.find((c) => c.id === mesh.name);
-          if (comp) {
-            (anyMesh.updateBuzzerState as (c: CircuitComponent, dt: number) => void)(comp, delta);
+          if (realComp) {
+            (anyMesh.updateBuzzerState as (c: CircuitComponent, dt: number) => void)(realComp, delta);
           }
         }
       }

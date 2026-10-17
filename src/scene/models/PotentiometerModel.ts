@@ -46,7 +46,7 @@ export function createPotentiometerMesh(comp: CircuitComponent): PotentiometerOb
   knobMesh.castShadow = true;
   knobGroup.add(knobMesh);
 
-  // White indicator pointer notch on knob with rounded edge
+  // White indicator pointer notch on knob
   const pointerGeo = new RoundedBoxGeometry(0.06, 0.08, 0.22, 2, 0.02);
   const pointerMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const pointerMesh = new THREE.Mesh(pointerGeo, pointerMat);
@@ -55,7 +55,7 @@ export function createPotentiometerMesh(comp: CircuitComponent): PotentiometerOb
 
   group.add(knobGroup);
 
-  // Terminal connection posts
+  // Terminal connection posts — WITH hitBox for reliable clicking
   comp.terminals.forEach((term) => {
     const postGroup = new THREE.Group();
     postGroup.name = `terminal::${comp.id}::${term.id}`;
@@ -75,16 +75,18 @@ export function createPotentiometerMesh(comp: CircuitComponent): PotentiometerOb
     postTop.position.y = 0.14;
     postGroup.add(postTop);
 
-    // Glowing selection halo
-    const haloGeo = new THREE.TorusGeometry(0.16, 0.03, 8, 20);
-    const haloMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.9,
-    });
-    const haloMesh = new THREE.Mesh(haloGeo, haloMat);
-    haloMesh.rotation.x = Math.PI / 2;
-    haloMesh.position.y = 0.14;
+    // ✅ Invisible hitbox for reliable click/touch
+    const hitBox = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 8, 8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.name = `terminal::${comp.id}::${term.id}`;
+    postGroup.add(hitBox);
+
+    const haloGeo = new THREE.RingGeometry(0.14, 0.24, 20);
+    const haloMesh = new THREE.Mesh(haloGeo, MATERIALS.terminalHighlight);
+    haloMesh.rotation.x = -Math.PI / 2;
+    haloMesh.position.y = 0.16;
     haloMesh.name = `halo::${comp.id}::${term.id}`;
     haloMesh.visible = false;
     postGroup.add(haloMesh);

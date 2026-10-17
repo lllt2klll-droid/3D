@@ -27,7 +27,7 @@ export function createBuzzerMesh(comp: CircuitComponent): BuzzerObject {
   canMesh.castShadow = true;
   group.add(canMesh);
 
-  // Center top sound aperture hole (Small dark inset hole)
+  // Center top sound aperture hole
   const holeGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.06, 16);
   const holeMat = new THREE.MeshBasicMaterial({ color: 0x09090b });
   const holeMesh = new THREE.Mesh(holeGeo, holeMat);
@@ -36,30 +36,36 @@ export function createBuzzerMesh(comp: CircuitComponent): BuzzerObject {
 
   // Top speaker diaphragm grill ring
   const grillGeo = new THREE.TorusGeometry(0.24, 0.02, 8, 20);
-  const grillMat = MATERIALS.metalSilver;
-  const grillMesh = new THREE.Mesh(grillGeo, grillMat);
+  const grillMesh = new THREE.Mesh(grillGeo, MATERIALS.metalSilver);
   grillMesh.rotation.x = Math.PI / 2;
   grillMesh.position.y = 0.54;
   group.add(grillMesh);
 
-  // Animated Sound Wave Halos (Expand when buzzer is sounding)
-  const waveMat = new THREE.MeshBasicMaterial({
+  // Sound Wave Halos (Expand when buzzer is sounding)
+  const waveMat1 = new THREE.MeshBasicMaterial({
     color: 0x06b6d4,
     transparent: true,
     opacity: 0.0,
     side: THREE.DoubleSide,
   });
-  const wave1 = new THREE.Mesh(new THREE.RingGeometry(0.18, 0.28, 24), waveMat);
+  const waveMat2 = new THREE.MeshBasicMaterial({
+    color: 0x06b6d4,
+    transparent: true,
+    opacity: 0.0,
+    side: THREE.DoubleSide,
+  });
+
+  const wave1 = new THREE.Mesh(new THREE.RingGeometry(0.18, 0.28, 24), waveMat1);
   wave1.rotation.x = -Math.PI / 2;
   wave1.position.y = 0.6;
   group.add(wave1);
 
-  const wave2 = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.42, 24), waveMat.clone());
+  const wave2 = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.42, 24), waveMat2);
   wave2.rotation.x = -Math.PI / 2;
   wave2.position.y = 0.72;
   group.add(wave2);
 
-  // Terminal connection posts
+  // Terminal connection posts — WITH hitBox for reliable clicking
   comp.terminals.forEach((term) => {
     const postGroup = new THREE.Group();
     postGroup.name = `terminal::${comp.id}::${term.id}`;
@@ -82,16 +88,19 @@ export function createBuzzerMesh(comp: CircuitComponent): BuzzerObject {
     postTop.position.y = 0.14;
     postGroup.add(postTop);
 
-    // Glowing selection halo
-    const haloGeo = new THREE.TorusGeometry(0.16, 0.03, 8, 20);
-    const haloMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.9,
-    });
-    const haloMesh = new THREE.Mesh(haloGeo, haloMat);
-    haloMesh.rotation.x = Math.PI / 2;
-    haloMesh.position.y = 0.14;
+    // ✅ Invisible hitbox for reliable click/touch
+    const hitBox = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 8, 8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.name = `terminal::${comp.id}::${term.id}`;
+    postGroup.add(hitBox);
+
+    // Glowing selection halo (RingGeometry for consistency)
+    const haloGeo = new THREE.RingGeometry(0.14, 0.24, 20);
+    const haloMesh = new THREE.Mesh(haloGeo, MATERIALS.terminalHighlight);
+    haloMesh.rotation.x = -Math.PI / 2;
+    haloMesh.position.y = 0.16;
     haloMesh.name = `halo::${comp.id}::${term.id}`;
     haloMesh.visible = false;
     postGroup.add(haloMesh);
@@ -107,13 +116,15 @@ export function createBuzzerMesh(comp: CircuitComponent): BuzzerObject {
       const pulse1 = (Math.sin(waveTimer) + 1) * 0.5;
       const pulse2 = (Math.sin(waveTimer + Math.PI / 2) + 1) * 0.5;
 
-      (wave1.material as THREE.MeshBasicMaterial).opacity = pulse1 * 0.75;
-      (wave2.material as THREE.MeshBasicMaterial).opacity = pulse2 * 0.55;
+      waveMat1.opacity = pulse1 * 0.75;
+      waveMat2.opacity = pulse2 * 0.55;
       wave1.scale.setScalar(1 + pulse1 * 0.25);
       wave2.scale.setScalar(1 + pulse2 * 0.35);
     } else {
-      (wave1.material as THREE.MeshBasicMaterial).opacity = 0;
-      (wave2.material as THREE.MeshBasicMaterial).opacity = 0;
+      waveMat1.opacity = 0;
+      waveMat2.opacity = 0;
+      wave1.scale.setScalar(1);
+      wave2.scale.setScalar(1);
     }
   };
 
