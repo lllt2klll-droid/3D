@@ -114,15 +114,23 @@ export function createMotorFanMesh(comp: CircuitComponent): MotorFanObject {
     pMesh.castShadow = true;
     postGroup.add(pMesh);
 
-    const capGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.05, 16);
+    const capGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 16);
     const capMesh = new THREE.Mesh(capGeo, MATERIALS.plasticDark);
-    capMesh.position.y = 0.1;
+    capMesh.position.y = 0.12;
     postGroup.add(capMesh);
 
-    const haloGeo = new THREE.RingGeometry(0.12, 0.18, 16);
+    // Generous invisible click hitbox
+    const hitBox = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 8, 8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.name = `terminal::${comp.id}::${term.id}`;
+    postGroup.add(hitBox);
+
+    const haloGeo = new THREE.RingGeometry(0.14, 0.26, 20);
     const haloMesh = new THREE.Mesh(haloGeo, MATERIALS.terminalHighlight);
     haloMesh.rotation.x = -Math.PI / 2;
-    haloMesh.position.y = 0.13;
+    haloMesh.position.y = 0.15;
     haloMesh.visible = false;
     haloMesh.name = `halo::${comp.id}::${term.id}`;
     postGroup.add(haloMesh);

@@ -17,6 +17,7 @@ export interface ViewerCallbacks {
   onSwitchToggle?: (comp: CircuitComponent) => void;
   onComponentClick?: (componentId: string) => void;
   onWireClick?: (wireId: string) => void;
+  onEmptyClick?: () => void;
 }
 
 export class ThreeViewer {
@@ -235,6 +236,9 @@ export class ThreeViewer {
         obj = obj.parent;
       }
     }
+
+    // Clicked empty surface
+    this.callbacks.onEmptyClick?.();
   };
 
   /**
@@ -312,16 +316,33 @@ export class ThreeViewer {
 
   /**
    * Update active terminal selection ring
+   * When connecting, lights up the starting terminal in gold/amber and all other connectable terminals in cyan!
    */
   public setSelectedTerminal(key: string | null) {
-    if (this.selectedTerminalKey) {
-      const prevHalo = this.scene.getObjectByName(`halo::${this.selectedTerminalKey}`);
-      if (prevHalo) prevHalo.visible = false;
-    }
+    // Reset all halos first
+    this.scene.traverse((obj) => {
+      if (obj.name && obj.name.startsWith('halo::')) {
+        obj.visible = false;
+        obj.scale.set(1, 1, 1);
+      }
+    });
+
     this.selectedTerminalKey = key;
     if (key) {
-      const nextHalo = this.scene.getObjectByName(`halo::${key}`);
-      if (nextHalo) nextHalo.visible = true;
+      // Highlight the selected starting terminal in bright gold/yellow
+      const startHalo = this.scene.getObjectByName(`halo::${key}`);
+      if (startHalo) {
+        startHalo.visible = true;
+        startHalo.scale.set(1.4, 1.4, 1.4);
+      }
+
+      // Highlight all other candidate terminals with cyan so the user immediately sees all targets
+      this.scene.traverse((obj) => {
+        if (obj.name && obj.name.startsWith('halo::') && obj.name !== `halo::${key}`) {
+          obj.visible = true;
+          obj.scale.set(1.15, 1.15, 1.15);
+        }
+      });
     }
   }
 

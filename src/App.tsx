@@ -29,11 +29,7 @@ import { ConfettiCelebration } from './components/ConfettiCelebration';
 
 import {
   Eye,
-  Zap,
-  Info,
-  CheckCircle2,
   AlertCircle,
-  Lightbulb,
 } from 'lucide-react';
 
 export function isWebGLAvailable(): boolean {
@@ -47,6 +43,18 @@ export function isWebGLAvailable(): boolean {
     return false;
   }
 }
+
+// Preset clean grid slots on the workbench to completely avoid overlapping
+const GRID_SLOTS: [number, number, number][] = [
+  [-2.2, 0, 0.8],
+  [0, 0, 0.8],
+  [2.2, 0, 0.8],
+  [-2.2, 0, -1.0],
+  [0, 0, -1.0],
+  [2.2, 0, -1.0],
+  [-3.4, 0, 0],
+  [3.4, 0, 0],
+];
 
 export const App: React.FC = () => {
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -62,6 +70,12 @@ export const App: React.FC = () => {
   const [wires, setWires] = useState<Wire[]>(() => {
     return CIRCUIT_TEMPLATES[1].wires;
   });
+
+  // Selected Component for direct action (deletion / inspection)
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
+
+  // Undo History Stack
+  const [history, setHistory] = useState<{ components: CircuitComponent[]; wires: Wire[] }[]>([]);
 
   // Wire Connection State
   const [selectedWireColor, setSelectedWireColor] = useState<WireColor>('red');
@@ -87,6 +101,22 @@ export const App: React.FC = () => {
 
   // WebGL Support State
   const [hasWebGL, setHasWebGL] = useState<boolean>(true);
+
+  // Push state to undo history
+  const pushHistory = useCallback(() => {
+    setHistory((prev) => [...prev.slice(-15), { components, wires }]);
+  }, [components, wires]);
+
+  // Undo last action
+  const handleUndo = () => {
+    if (history.length === 0) return;
+    sounds.playClick();
+    const last = history[history.length - 1];
+    setHistory((prev) => prev.slice(0, -1));
+    setComponents(last.components);
+    setWires(last.wires);
+    setSelectedComponentId(null);
+  };
 
   // Run Graph-based Circuit Analysis
   const circuitAnalysis: CircuitAnalysisResult = React.useMemo(() => {
@@ -115,14 +145,14 @@ export const App: React.FC = () => {
         handleToggleSwitch(comp.id);
       },
       onComponentClick: (compId) => {
-        const found = components.find((c) => c.id === compId);
-        if (found && COMPONENT_CATALOG[found.type]) {
-          sounds.playClick();
-          setInspectingItem(COMPONENT_CATALOG[found.type]);
-        }
+        sounds.playClick();
+        setSelectedComponentId(compId);
       },
       onWireClick: (wireId) => {
         handleDeleteWire(wireId);
+      },
+      onEmptyClick: () => {
+        setSelectedComponentId(null);
       },
     });
 
@@ -143,8 +173,7 @@ export const App: React.FC = () => {
     viewerRef.current.syncWires(wires, activeComponents);
     viewerRef.current.updateAllComponentStates(activeComponents);
     viewerRef.current.updateEnergyEnv(sunlight, windSpeed);
-    viewerRef.current.setHouseLit(circuitAnalysis.isClosedCircuit);
-  }, [activeComponents, wires, sunlight, windSpeed, circuitAnalysis.isClosedCircuit]);
+  }, [activeComponents, wires, sunlight, windSpeed]);
 
   // Audio effects when circuit closes/opens or shorts
   const prevClosedRef = useRef(false);
@@ -170,6 +199,7 @@ export const App: React.FC = () => {
 
   // Handle Switch Toggle
   const handleToggleSwitch = useCallback((switchId: string) => {
+    pushHistory();
     setComponents((prev) =>
       prev.map((c) => {
         if (c.id === switchId && c.type === 'switch') {
@@ -183,7 +213,7 @@ export const App: React.FC = () => {
         return c;
       })
     );
-  }, []);
+  }, [pushHistory]);
 
   // Handle Terminal Click for Wire Creation
   const handleTerminalClick = (compId: string, termId: string) => {
@@ -218,6 +248,7 @@ export const App: React.FC = () => {
       );
 
       if (!exists) {
+        pushHistory();
         const newWire: Wire = {
           id: `w-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           fromComponentId: connectingTerminal.compId,
@@ -240,22 +271,53 @@ export const App: React.FC = () => {
 
   // Delete a wire
   const handleDeleteWire = (wireId: string) => {
+    pushHistory();
     sounds.playWireDisconnect();
     setWires((prev) => prev.filter((w) => w.id !== wireId));
   };
 
-  // Add component to sandbox
+  // Delete selected component from workbench
+  const handleDeleteSelectedComponent = () => {
+    if (!selectedComponentId) return;
+    pushHistory();
+    sounds.playWireDisconnect();
+    setComponents((prev) => prev.filter((c) => c.id !== selectedComponentId));
+    setWires((prev) =>
+      prev.filter(
+        (w) =>
+          w.fromComponentId !== selectedComponentId &&
+          w.toComponentId !== selectedComponentId
+      )
+    );
+    setSelectedComponentId(null);
+  };
+
+  // Add component to sandbox using smart non-overlapping grid slots
   const handleAddComponent = (type: ComponentType) => {
+    pushHistory();
     const id = `${type}-${Date.now().toString().slice(-4)}`;
-    // Spread position near center with random offset
-    const x = (Math.random() - 0.5) * 3.5;
-    const z = (Math.random() - 0.5) * 2.5;
-    const newComp = createComponent(type, id, [x, 0, z]);
+
+    // Find the first open non-overlapping slot on the bench
+    let chosenPos = GRID_SLOTS[0];
+    for (const slot of GRID_SLOTS) {
+      const isOccupied = components.some(
+        (c) => Math.hypot(c.position[0] - slot[0], c.position[2] - slot[2]) < 1.1
+      );
+      if (!isOccupied) {
+        chosenPos = slot;
+        break;
+      }
+    }
+
+    const newComp = createComponent(type, id, chosenPos);
     setComponents((prev) => [...prev, newComp]);
+    setSelectedComponentId(id);
+    sounds.playClick();
   };
 
   // Clear all wires
   const handleClearWires = () => {
+    pushHistory();
     setWires([]);
     setConnectingTerminal(null);
     viewerRef.current?.setSelectedTerminal(null);
@@ -263,8 +325,10 @@ export const App: React.FC = () => {
 
   // Reset circuit to clean template
   const handleResetCircuit = () => {
+    pushHistory();
     setComponents(CIRCUIT_TEMPLATES[1].components);
     setWires(CIRCUIT_TEMPLATES[1].wires);
+    setSelectedComponentId(null);
     setConnectingTerminal(null);
     viewerRef.current?.setSelectedTerminal(null);
     viewerRef.current?.resetCamera();
@@ -272,24 +336,32 @@ export const App: React.FC = () => {
 
   // Load a preset template
   const handleSelectTemplate = (template: CircuitTemplate) => {
+    pushHistory();
     setComponents(template.components);
     setWires(template.wires);
+    setSelectedComponentId(null);
     setConnectingTerminal(null);
     viewerRef.current?.setSelectedTerminal(null);
     viewerRef.current?.resetCamera();
+  };
+
+  // Load quick 1-click template
+  const handleLoadQuickTemplate = (templateId: string) => {
+    pushHistory();
+    const tmpl = CIRCUIT_TEMPLATES.find((t) => t.id === templateId) || CIRCUIT_TEMPLATES[0];
+    handleSelectTemplate(tmpl);
   };
 
   // Switch App Mode
   const handleSelectMode = (mode: AppMode) => {
     setCurrentMode(mode);
     setConnectingTerminal(null);
+    setSelectedComponentId(null);
     viewerRef.current?.setSelectedTerminal(null);
 
     if (mode === 'explore') {
-      // Set single component in view for clean inspection
       handleSelectExploreComponent(selectedExploreType);
     } else if (mode === 'energy') {
-      // Load clean energy diorama circuit
       const energyTmpl = CIRCUIT_TEMPLATES[3]; // solar_light
       setComponents(energyTmpl.components);
       setWires(energyTmpl.wires);
@@ -318,6 +390,7 @@ export const App: React.FC = () => {
     setCurrentChallenge(ch);
     setComponents((ch.setupComponents as CircuitComponent[]) || []);
     setWires(ch.setupWires || []);
+    setSelectedComponentId(null);
     setConnectingTerminal(null);
     viewerRef.current?.setSelectedTerminal(null);
     viewerRef.current?.resetCamera();
@@ -380,6 +453,8 @@ export const App: React.FC = () => {
       </div>
     );
   }
+
+  const selectedCompObj = activeComponents.find((c) => c.id === selectedComponentId) || null;
 
   return (
     <div
@@ -506,7 +581,7 @@ export const App: React.FC = () => {
             left: '50%',
             transform: 'translateX(-50%)',
             width: 'calc(100% - 24px)',
-            maxWidth: '920px',
+            maxWidth: '960px',
             zIndex: 20,
             pointerEvents: 'auto',
             display: 'flex',
@@ -523,11 +598,23 @@ export const App: React.FC = () => {
               onClearWires={handleClearWires}
               onResetCircuit={handleResetCircuit}
               onOpenTemplates={() => setIsTemplatesOpen(true)}
+              onLoadQuickTemplate={handleLoadQuickTemplate}
               connectingTerminal={connectingTerminal ? `${connectingTerminal.compId}` : null}
               onCancelConnecting={() => {
                 setConnectingTerminal(null);
                 viewerRef.current?.setSelectedTerminal(null);
               }}
+              selectedComponent={selectedCompObj}
+              onDeleteSelectedComponent={handleDeleteSelectedComponent}
+              onInspectSelectedComponent={() => {
+                if (selectedCompObj) setInspectingItem(COMPONENT_CATALOG[selectedCompObj.type]);
+              }}
+              onToggleSwitchComponent={() => {
+                if (selectedComponentId) handleToggleSwitch(selectedComponentId);
+              }}
+              onDeselectComponent={() => setSelectedComponentId(null)}
+              canUndo={history.length > 0}
+              onUndo={handleUndo}
             />
           )}
 

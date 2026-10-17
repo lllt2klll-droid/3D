@@ -59,16 +59,24 @@ export function createBatteryMesh(comp: CircuitComponent): THREE.Group {
     postGroup.add(postMesh);
 
     // Metal screw cap
-    const capGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.06, 16);
+    const capGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 16);
     const capMesh = new THREE.Mesh(capGeo, MATERIALS.metalSilver);
     capMesh.position.y = 0.12;
     postGroup.add(capMesh);
 
-    // Terminal selection halo (invisible by default, shows on hover/select)
-    const haloGeo = new THREE.RingGeometry(0.12, 0.18, 16);
+    // Generous invisible click hitbox (radius 0.32) for effortless touch and mouse interaction
+    const hitBox = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 8, 8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.name = `terminal::${comp.id}::${term.id}`;
+    postGroup.add(hitBox);
+
+    // Terminal selection halo (shows on hover/connecting)
+    const haloGeo = new THREE.RingGeometry(0.14, 0.26, 20);
     const haloMesh = new THREE.Mesh(haloGeo, MATERIALS.terminalHighlight);
     haloMesh.rotation.x = -Math.PI / 2;
-    haloMesh.position.y = 0.16;
+    haloMesh.position.y = 0.17;
     haloMesh.visible = false;
     haloMesh.name = `halo::${comp.id}::${term.id}`;
     postGroup.add(haloMesh);

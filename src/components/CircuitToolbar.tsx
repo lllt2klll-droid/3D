@@ -1,9 +1,8 @@
 import React from 'react';
-import { ComponentType, WireColor } from '../types';
+import { ComponentType, WireColor, CircuitComponent } from '../types';
 import { COMPONENT_CATALOG } from '../circuit/componentCatalog';
 import { sounds } from '../audio/soundEffects';
 import {
-  Plus,
   Trash2,
   FolderOpen,
   RotateCcw,
@@ -16,6 +15,9 @@ import {
   Wind,
   Layers,
   Sparkles,
+  Undo2,
+  Info,
+  Check,
 } from 'lucide-react';
 
 interface CircuitToolbarProps {
@@ -25,8 +27,16 @@ interface CircuitToolbarProps {
   onClearWires: () => void;
   onResetCircuit: () => void;
   onOpenTemplates: () => void;
+  onLoadQuickTemplate: (templateId: string) => void;
   connectingTerminal: string | null;
   onCancelConnecting: () => void;
+  selectedComponent: CircuitComponent | null;
+  onDeleteSelectedComponent: () => void;
+  onInspectSelectedComponent: () => void;
+  onToggleSwitchComponent?: () => void;
+  onDeselectComponent: () => void;
+  canUndo: boolean;
+  onUndo: () => void;
 }
 
 export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
@@ -36,8 +46,16 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
   onClearWires,
   onResetCircuit,
   onOpenTemplates,
+  onLoadQuickTemplate,
   connectingTerminal,
   onCancelConnecting,
+  selectedComponent,
+  onDeleteSelectedComponent,
+  onInspectSelectedComponent,
+  onToggleSwitchComponent,
+  onDeselectComponent,
+  canUndo,
+  onUndo,
 }) => {
   const componentButtons: { type: ComponentType; label: string; icon: React.ReactNode }[] = [
     { type: 'battery', label: 'Pin 1.5V', icon: <Battery size={18} /> },
@@ -62,33 +80,33 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
+        gap: '8px',
         width: '100%',
       }}
     >
-      {/* Active Connecting Notice (if in the middle of wire connection) */}
+      {/* Active Connecting Notice (when in the middle of wire connection) */}
       {connectingTerminal && (
         <div
           className="stem-card animate-pulse-glow"
           style={{
             backgroundColor: '#eff6ff',
             borderColor: '#93c5fd',
-            padding: '8px 14px',
+            padding: '10px 16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '10px',
+            gap: '12px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#1d4ed8' }}>
-            <Zap size={18} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#1d4ed8' }}>
+            <Zap size={20} color="#0284c7" />
             <span>
-              <strong>Đang nối dây:</strong> Hãy bấm vào chốt kim loại thứ hai để hoàn thành đoạn dây!
+              <strong>Đang chọn nối dây:</strong> Các chốt kim loại đang nhấp nháy sáng trên bàn. Hãy bấm vào một chốt khác để hoàn thành đoạn dây!
             </span>
           </div>
           <button
             className="btn-3d btn-neutral"
-            style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+            style={{ padding: '6px 12px', fontSize: '0.82rem' }}
             onClick={onCancelConnecting}
           >
             Hủy nối
@@ -96,7 +114,73 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
         </div>
       )}
 
-      {/* Main Bar */}
+      {/* Selected Component Quick Action Card */}
+      {selectedComponent && (
+        <div
+          className="stem-card"
+          style={{
+            backgroundColor: '#ffffff',
+            borderColor: '#0284c7',
+            padding: '10px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            boxShadow: '0 6px 16px rgba(2, 132, 199, 0.15)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase' }}>
+              Đang chọn:
+            </span>
+            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>
+              {selectedComponent.name}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {selectedComponent.type === 'switch' && onToggleSwitchComponent && (
+              <button
+                className="btn-3d btn-primary"
+                style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+                onClick={onToggleSwitchComponent}
+              >
+                <ToggleLeft size={16} />
+                <span>{selectedComponent.state.isOpen ? 'Đóng công tắc' : 'Mở công tắc'}</span>
+              </button>
+            )}
+
+            <button
+              className="btn-3d btn-neutral"
+              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+              onClick={onInspectSelectedComponent}
+            >
+              <Info size={16} color="#0284c7" />
+              <span>Tìm hiểu</span>
+            </button>
+
+            <button
+              className="btn-3d btn-danger"
+              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+              onClick={onDeleteSelectedComponent}
+              title="Xóa linh kiện này khỏi bàn thí nghiệm"
+            >
+              <Trash2 size={16} />
+              <span>Xóa linh kiện này</span>
+            </button>
+
+            <button
+              className="btn-3d btn-neutral"
+              style={{ padding: '6px 10px', fontSize: '0.82rem' }}
+              onClick={onDeselectComponent}
+            >
+              Bỏ chọn
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Control Bar */}
       <div
         className="stem-card"
         style={{
@@ -109,7 +193,7 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
         }}
       >
         {/* Component Add Palette */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', maxWidth: '100%', padding: '4px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', maxWidth: '100%', padding: '4px 0' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748b', whiteSpace: 'nowrap' }}>
             Thêm linh kiện:
           </span>
@@ -119,10 +203,10 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
               key={btn.type}
               className="btn-3d btn-neutral"
               style={{
-                padding: '7px 12px',
+                padding: '6px 11px',
                 fontSize: '0.85rem',
                 whiteSpace: 'nowrap',
-                gap: '6px',
+                gap: '5px',
               }}
               onClick={() => {
                 sounds.playClick();
@@ -136,8 +220,8 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
           ))}
         </div>
 
-        {/* Wire Color Picker & Quick Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        {/* Wire Colors & Fast Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Wire Color Picker */}
           <div
             style={{
@@ -176,29 +260,31 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
             })}
           </div>
 
-          {/* Templates Button */}
-          <button
-            className="btn-3d btn-neutral"
-            style={{ padding: '7px 12px', fontSize: '0.85rem' }}
-            onClick={() => {
-              sounds.playClick();
-              onOpenTemplates();
-            }}
-            title="Chọn các mẫu mạch có sẵn"
-          >
-            <FolderOpen size={16} color="#0284c7" />
-            <span>Mẫu mạch</span>
-          </button>
+          {/* Quick Undo Button */}
+          {canUndo && (
+            <button
+              className="btn-3d btn-neutral"
+              style={{ padding: '6px 11px', fontSize: '0.82rem' }}
+              onClick={() => {
+                sounds.playClick();
+                onUndo();
+              }}
+              title="Hoàn tác thao tác vừa rồi"
+            >
+              <Undo2 size={16} color="#0284c7" />
+              <span>Hoàn tác</span>
+            </button>
+          )}
 
           {/* Clear Wires */}
           <button
             className="btn-3d btn-neutral"
-            style={{ padding: '7px 12px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 11px', fontSize: '0.82rem' }}
             onClick={() => {
               sounds.playWireDisconnect();
               onClearWires();
             }}
-            title="Tháo hết tất cả dây dẫn trong mạch"
+            title="Tháo hết tất cả dây nối"
           >
             <Trash2 size={16} color="#ef4444" />
             <span>Tháo dây</span>
@@ -207,7 +293,7 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
           {/* Reset Circuit */}
           <button
             className="btn-3d btn-neutral"
-            style={{ padding: '7px 12px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 11px', fontSize: '0.82rem' }}
             onClick={() => {
               sounds.playClick();
               onResetCircuit();
@@ -216,6 +302,80 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
           >
             <RotateCcw size={16} color="#f59e0b" />
             <span>Làm mới</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 1-Click Quick Preset Circuits Bar (Convenient!) */}
+      <div
+        className="stem-card"
+        style={{
+          padding: '6px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          backgroundColor: 'rgba(255, 255, 255, 0.92)',
+          overflowX: 'auto',
+        }}
+      >
+        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0284c7', whiteSpace: 'nowrap' }}>
+          ⚡ Mạch mẫu 1-chạm:
+        </span>
+
+        <button
+          className="btn-3d btn-neutral"
+          style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+          onClick={() => onLoadQuickTemplate('simple_bulb')}
+        >
+          <Lightbulb size={15} color="#eab308" />
+          <span>Mạch Đèn</span>
+        </button>
+
+        <button
+          className="btn-3d btn-neutral"
+          style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+          onClick={() => onLoadQuickTemplate('motor_fan')}
+        >
+          <Fan size={15} color="#0284c7" />
+          <span>Mạch Quạt</span>
+        </button>
+
+        <button
+          className="btn-3d btn-neutral"
+          style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+          onClick={() => onLoadQuickTemplate('solar_light')}
+        >
+          <Sun size={15} color="#f59e0b" />
+          <span>Pin Mặt Trời</span>
+        </button>
+
+        <button
+          className="btn-3d btn-neutral"
+          style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+          onClick={() => onLoadQuickTemplate('wind_fan')}
+        >
+          <Wind size={15} color="#10b981" />
+          <span>Tuabin Gió</span>
+        </button>
+
+        <button
+          className="btn-3d btn-neutral"
+          style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+          onClick={() => onLoadQuickTemplate('empty')}
+        >
+          <Trash2 size={15} color="#64748b" />
+          <span>Bàn trống</span>
+        </button>
+
+        <div style={{ marginLeft: 'auto' }}>
+          <button
+            className="btn-3d btn-neutral"
+            style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+            onClick={onOpenTemplates}
+            title="Xem tất cả mẫu mạch và hướng dẫn"
+          >
+            <FolderOpen size={15} color="#0284c7" />
+            <span>Tất cả mẫu</span>
           </button>
         </div>
       </div>
