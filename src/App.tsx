@@ -107,6 +107,10 @@ export const App: React.FC = () => {
   // WebGL Support State
   const [hasWebGL, setHasWebGL] = useState<boolean>(true);
 
+  // Day/Night Mode State
+  const [isNightMode, setIsNightMode] = useState<boolean>(false);
+
+
   // Push state to undo history
   const pushHistory = useCallback(() => {
     setHistory((prev) => [...prev.slice(-15), { components, wires }]);
@@ -566,6 +570,14 @@ export const App: React.FC = () => {
     }
   };
 
+  // Day/Night Toggle
+  const handleToggleDayNight = useCallback(() => {
+    const next = !isNightMode;
+    setIsNightMode(next);
+    viewerRef.current?.setDayNight(next);
+    sounds.playDayNight(next);
+  }, [isNightMode]);
+
   if (!hasWebGL) {
     return (
       <div
@@ -614,6 +626,8 @@ export const App: React.FC = () => {
         onSelectMode={handleSelectMode}
         onResetCamera={() => viewerRef.current?.resetCamera()}
         onOpenHelp={() => setIsHelpOpen(true)}
+        isNightMode={isNightMode}
+        onToggleDayNight={handleToggleDayNight}
       />
 
       {/* Main 3D Viewport & Interactive Overlay */}

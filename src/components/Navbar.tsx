@@ -12,6 +12,8 @@ import {
   Maximize2,
   Minimize2,
   HelpCircle,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -19,6 +21,8 @@ interface NavbarProps {
   onSelectMode: (mode: AppMode) => void;
   onResetCamera: () => void;
   onOpenHelp: () => void;
+  isNightMode: boolean;
+  onToggleDayNight: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -26,6 +30,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectMode,
   onResetCamera,
   onOpenHelp,
+  isNightMode,
+  onToggleDayNight,
 }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -205,6 +211,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           title="Toàn màn hình"
         >
           {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+        </button>
+
+        <button
+          className="btn-3d btn-neutral"
+          style={{
+            padding: '8px 10px',
+            background: isNightMode
+              ? 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)'
+              : 'linear-gradient(135deg, #fef9c3 0%, #fde047 100%)',
+            border: isNightMode ? '1.5px solid #6366f1' : '1.5px solid #f59e0b',
+            minWidth: '40px',
+          }}
+          onClick={onToggleDayNight}
+          title={isNightMode ? 'Chuyển sang ban ngày ☀️' : 'Chuyển sang ban đêm 🌙'}
+        >
+          {isNightMode
+            ? <Sun size={18} color="#fde047" />
+            : <Moon size={18} color="#6366f1" />}
         </button>
 
         <button

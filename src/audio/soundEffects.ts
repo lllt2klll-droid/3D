@@ -313,6 +313,40 @@ class SoundEngine {
   }
 
   /**
+   * Day / Night transition chime
+   */
+  public playDayNight(isNight: boolean) {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    // Night: relaxing descending soft notes (E5 -> B4 -> G#4)
+    // Day: bright ascending sunrise notes (D5 -> G5 -> B5)
+    const notes = isNight ? [659.25, 493.88, 415.3] : [587.33, 783.99, 987.77];
+
+    notes.forEach((freq, idx) => {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = isNight ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.09);
+
+      const noteTime = t + idx * 0.09;
+      gain.gain.setValueAtTime(0.001, noteTime);
+      gain.gain.linearRampToValueAtTime(0.08, noteTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.28);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.28);
+    });
+  }
+
+  /**
    * Continuous motor/fan sound control
    */
   public setMotorRunning(running: boolean, speed: number = 0.5) {

@@ -39,6 +39,10 @@ export class ThreeViewer {
   // Environment & Lighting
   private ambientLight: THREE.AmbientLight;
   private sunLight: THREE.DirectionalLight;
+  private fillLight: THREE.DirectionalLight;
+  private skyMesh: THREE.Mesh | null = null;
+  private starsGroup: THREE.Group | null = null;
+  private isNightMode: boolean = false;
   private diorama: DioramaEnvironment;
 
   // Circuit Layers
@@ -128,9 +132,45 @@ export class ThreeViewer {
     this.sunLight.shadow.bias = -0.0005;
     this.scene.add(this.sunLight);
 
-    const fillLight = new THREE.DirectionalLight(0xbae6fd, 0.6);
-    fillLight.position.set(-5, 4, -5);
-    this.scene.add(fillLight);
+    this.fillLight = new THREE.DirectionalLight(0xbae6fd, 0.6);
+    this.fillLight.position.set(-5, 4, -5);
+    this.scene.add(this.fillLight);
+
+    // 5b. Sky Dome (large sphere wrapping the scene, visible in background)
+    const skyGeo = new THREE.SphereGeometry(45, 24, 16);
+    const skyMat = new THREE.MeshBasicMaterial({
+      color: 0xf6f9fc,
+      side: THREE.BackSide,
+    });
+    this.skyMesh = new THREE.Mesh(skyGeo, skyMat);
+    this.scene.add(this.skyMesh);
+
+    // 5c. Star particles (hidden by default, shown at night)
+    this.starsGroup = new THREE.Group();
+    const starGeometry = new THREE.BufferGeometry();
+    const starPositions: number[] = [];
+    for (let i = 0; i < 280; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 40 + Math.random() * 4;
+      starPositions.push(
+        r * Math.sin(phi) * Math.cos(theta),
+        Math.abs(r * Math.cos(phi)) + 5, // keep above horizon
+        r * Math.sin(phi) * Math.sin(theta)
+      );
+    }
+    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+    const starMaterial = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.38,
+      transparent: true,
+      opacity: 0,
+      sizeAttenuation: true,
+    });
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    this.starsGroup.add(stars);
+    this.starsGroup.visible = false;
+    this.scene.add(this.starsGroup);
 
     // 6. Base Clean Workbench
     this.diorama = createBaseDiorama();
@@ -521,7 +561,64 @@ export class ThreeViewer {
    */
   public updateEnergyEnv(sunlight: number, windSpeed: number) {
     this.energyEnv = { sunlight, windSpeed };
-    this.sunLight.intensity = 0.5 + sunlight * 1.5;
+    // In night mode, don't fight the night lighting with full sunlight
+    if (!this.isNightMode) {
+      this.sunLight.intensity = 0.5 + sunlight * 1.5;
+    }
+  }
+
+  /**
+   * Toggle Day / Night environment mode with smooth lighting transition
+   */
+  public setDayNight(isNight: boolean) {
+    this.isNightMode = isNight;
+
+    const skyMatAny = this.skyMesh?.material as THREE.MeshBasicMaterial | undefined;
+
+    if (isNight) {
+      // --- NIGHT MODE ---
+      // Deep midnight blue sky
+      if (skyMatAny) skyMatAny.color.setHex(0x0b0e1a);
+      this.scene.background = new THREE.Color(0x0b0e1a);
+      // Dim warm sun to a cool moonlight silver
+      this.sunLight.color.setHex(0xaab8d0);
+      this.sunLight.intensity = 0.22;
+      this.sunLight.position.set(-8, 12, -6);
+      // Cool blue ambient moonlight
+      this.ambientLight.color.setHex(0x1a2a4a);
+      this.ambientLight.intensity = 0.55;
+      // Soft lavender fill from below
+      this.fillLight.color.setHex(0x2d1b5e);
+      this.fillLight.intensity = 0.18;
+      // Show star particles with fade-in via opacity
+      if (this.starsGroup) {
+        this.starsGroup.visible = true;
+        const starPoints = this.starsGroup.children[0] as THREE.Points;
+        (starPoints.material as THREE.PointsMaterial).opacity = 0.88;
+      }
+    } else {
+      // --- DAY MODE ---
+      if (skyMatAny) skyMatAny.color.setHex(0xf6f9fc);
+      this.scene.background = new THREE.Color(0xf6f9fc);
+      // Warm golden sunlight
+      this.sunLight.color.setHex(0xfffbeb);
+      this.sunLight.intensity = 1.8;
+      this.sunLight.position.set(6, 10, 6);
+      // Bright white ambient
+      this.ambientLight.color.setHex(0xffffff);
+      this.ambientLight.intensity = 1.25;
+      // Pale blue fill
+      this.fillLight.color.setHex(0xbae6fd);
+      this.fillLight.intensity = 0.6;
+      // Hide stars
+      if (this.starsGroup) {
+        this.starsGroup.visible = false;
+        const starPoints = this.starsGroup.children[0] as THREE.Points;
+        (starPoints.material as THREE.PointsMaterial).opacity = 0;
+      }
+      // Re-apply energy env sunlight
+      this.sunLight.intensity = 0.5 + this.energyEnv.sunlight * 1.5;
+    }
   }
 
   /**
