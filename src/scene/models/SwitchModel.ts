@@ -5,6 +5,7 @@ import { CircuitComponent } from '../../types';
 
 export interface SwitchObject extends THREE.Group {
   updateSwitchState: (comp: CircuitComponent) => void;
+  animateLever: (delta: number) => void;
   toggleLever: () => void;
 }
 
@@ -44,7 +45,14 @@ export function createSwitchMesh(
   jawMesh.position.set(0.45, 0.32, 0);
   group.add(jawMesh);
 
-  // Movable Lever Pivot Group
+  // Status indicator LED dot (green = closed / red = open)
+  const indicatorGeo = new THREE.SphereGeometry(0.07, 12, 12);
+  const indicatorMat = new THREE.MeshBasicMaterial({ color: 0xef4444 }); // starts red (open)
+  const indicatorMesh = new THREE.Mesh(indicatorGeo, indicatorMat);
+  indicatorMesh.position.set(0, 0.16, 0.3);
+  group.add(indicatorMesh);
+
+  // Movable Lever Pivot Group — pivots around the left post
   const leverGroup = new THREE.Group();
   leverGroup.position.set(-0.45, 0.28, 0);
   leverGroup.name = `lever::${comp.id}`;
@@ -69,6 +77,15 @@ export function createSwitchMesh(
   const knobTipMesh = new THREE.Mesh(knobTipGeo, MATERIALS.plasticYellow);
   knobTipMesh.position.set(1.12, 0, 0);
   leverGroup.add(knobTipMesh);
+
+  // Hitbox for lever click — large enough for easy touch
+  const leverHitbox = new THREE.Mesh(
+    new THREE.BoxGeometry(1.0, 0.3, 0.25),
+    new THREE.MeshBasicMaterial({ visible: false })
+  );
+  leverHitbox.position.set(0.5, 0, 0);
+  leverHitbox.name = `lever::${comp.id}`;
+  leverGroup.add(leverHitbox);
 
   group.add(leverGroup);
 
@@ -107,15 +124,25 @@ export function createSwitchMesh(
     group.add(postGroup);
   });
 
-  // Target angle: open = Math.PI / 4 (~45 deg), closed = 0 deg
-  let targetAngle = comp.state.isOpen ? Math.PI / 4 : 0;
+  // Target angle: open = +35° tilt up, closed = 0° (horizontal touching catch)
+  // Positive Z rotation tilts the blade tip upward (open/OFF position)
+  const OPEN_ANGLE = Math.PI / 5;   // ~36° — lever raised (open, OFF)
+  const CLOSED_ANGLE = 0;           // 0° — lever horizontal (closed, ON)
+
+  let targetAngle = comp.state.isOpen ? OPEN_ANGLE : CLOSED_ANGLE;
   leverGroup.rotation.z = targetAngle;
 
+  // Called from React state changes — just updates target
   group.updateSwitchState = (currentComp: CircuitComponent) => {
     const isOpen = currentComp.state.isOpen ?? false;
-    targetAngle = isOpen ? Math.PI / 4 : 0;
-    // Animate smoothly to target rotation
-    leverGroup.rotation.z = THREE.MathUtils.lerp(leverGroup.rotation.z, targetAngle, 0.2);
+    targetAngle = isOpen ? OPEN_ANGLE : CLOSED_ANGLE;
+    // Indicator light: green when closed (ON), red when open (OFF)
+    indicatorMat.color.setHex(isOpen ? 0xef4444 : 0x22c55e);
+  };
+
+  // Called every animation frame — smoothly interpolates lever rotation
+  group.animateLever = (_delta: number) => {
+    leverGroup.rotation.z = THREE.MathUtils.lerp(leverGroup.rotation.z, targetAngle, 0.12);
   };
 
   group.toggleLever = () => {

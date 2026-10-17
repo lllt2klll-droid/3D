@@ -661,10 +661,20 @@ export class ThreeViewer {
       // Controls damping
       this.controls.update();
 
-      // Update dynamic states of components
+      // Update dynamic states of components (per-frame animations)
       for (const mesh of this.componentMeshes.values()) {
         const anyMesh = mesh as unknown as Record<string, unknown>;
         const realComp = this.currentComponents.find((c) => c.id === mesh.name);
+
+        // ✅ Smooth bulb glow lerp every frame
+        if (typeof anyMesh.animateBulb === 'function') {
+          (anyMesh.animateBulb as (dt: number) => void)(delta);
+        }
+
+        // ✅ Smooth switch lever animation every frame
+        if (typeof anyMesh.animateLever === 'function') {
+          (anyMesh.animateLever as (dt: number) => void)(delta);
+        }
 
         if (typeof anyMesh.updateMotorState === 'function') {
           // ✅ Use real component state — respects actual isSpinning from circuit analysis
