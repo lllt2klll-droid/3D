@@ -8,11 +8,17 @@ import {
   Info,
   ToggleLeft,
   X,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Hand,
 } from 'lucide-react';
 
 interface ComponentActionWidgetProps {
   component: CircuitComponent | null;
   onRotate: () => void;
+  onMoveDelta: (dx: number, dz: number) => void;
   onDelete: () => void;
   onInspect: () => void;
   onToggleSwitch?: () => void;
@@ -22,6 +28,7 @@ interface ComponentActionWidgetProps {
 export const ComponentActionWidget: React.FC<ComponentActionWidgetProps> = ({
   component,
   onRotate,
+  onMoveDelta,
   onDelete,
   onInspect,
   onToggleSwitch,
@@ -34,27 +41,51 @@ export const ComponentActionWidget: React.FC<ComponentActionWidgetProps> = ({
       className="stem-card animate-pulse-glow"
       style={{
         position: 'absolute',
-        top: '80px',
+        top: '76px',
         right: '16px',
         zIndex: 30,
-        padding: '12px 16px',
+        padding: '14px 16px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
+        gap: '12px',
         backgroundColor: 'rgba(255, 255, 255, 0.98)',
         border: '2px solid #0284c7',
-        borderRadius: '18px',
-        boxShadow: '0 8px 24px rgba(2, 132, 199, 0.2)',
-        minWidth: '220px',
+        borderRadius: '20px',
+        boxShadow: '0 10px 30px rgba(2, 132, 199, 0.22)',
+        width: '260px',
+        maxWidth: 'calc(100vw - 32px)',
       }}
     >
-      {/* Title & Deselect */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+      {/* Title & Deselect Button */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid #e2e8f0',
+          paddingBottom: '8px',
+        }}
+      >
         <div>
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase' }}>
+          <span
+            style={{
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              color: '#0284c7',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
+          >
             Đang chọn linh kiện
           </span>
-          <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+          <h4
+            style={{
+              fontSize: '1.05rem',
+              fontWeight: 800,
+              color: '#0f172a',
+              marginTop: '2px',
+            }}
+          >
             {component.name}
           </h4>
         </div>
@@ -67,46 +98,63 @@ export const ComponentActionWidget: React.FC<ComponentActionWidgetProps> = ({
             background: '#f1f5f9',
             border: 'none',
             borderRadius: '50%',
-            width: '28px',
-            height: '28px',
+            width: '30px',
+            height: '30px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             color: '#64748b',
+            transition: 'background 0.15s ease',
           }}
-          title="Bỏ chọn"
+          title="Bỏ chọn linh kiện"
         >
-          <X size={16} />
+          <X size={18} />
         </button>
       </div>
 
-      {/* Drag & Move Instruction Hint */}
+      {/* Touch/Mouse Drag Info Pill */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          padding: '6px 10px',
-          borderRadius: '10px',
+          padding: '8px 10px',
+          borderRadius: '12px',
           backgroundColor: '#eff6ff',
           border: '1px dashed #93c5fd',
-          fontSize: '0.8rem',
+          fontSize: '0.78rem',
           color: '#1d4ed8',
+          lineHeight: 1.35,
         }}
       >
-        <Move size={16} style={{ flexShrink: 0 }} />
+        <Hand size={18} style={{ flexShrink: 0, color: '#0284c7' }} />
         <span>
-          <strong>Dí và kéo:</strong> Nhấn giữ trực tiếp vào linh kiện trên bàn và kéo để di chuyển vị trí!
+          <strong>Dí & Kéo 3D:</strong> Nhấn giữ chuột hoặc ngón tay trực tiếp vào khối trên bàn để kéo tự do!
         </span>
       </div>
 
-      {/* Action Buttons Grid */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {/* Rotate & Move Controls Section */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          backgroundColor: '#f8fafc',
+          padding: '10px',
+          borderRadius: '14px',
+          border: '1px solid #e2e8f0',
+        }}
+      >
         {/* Rotate Button */}
         <button
           className="btn-3d btn-primary"
-          style={{ padding: '8px 12px', fontSize: '0.85rem', width: '100%', justifyContent: 'flex-start' }}
+          style={{
+            padding: '8px 12px',
+            fontSize: '0.85rem',
+            width: '100%',
+            justifyContent: 'center',
+          }}
           onClick={() => {
             sounds.playClick();
             onRotate();
@@ -117,45 +165,161 @@ export const ComponentActionWidget: React.FC<ComponentActionWidgetProps> = ({
           <span>Xoay khối (45°)</span>
         </button>
 
-        {/* If Switch: Toggle switch */}
-        {component.type === 'switch' && onToggleSwitch && (
-          <button
-            className="btn-3d btn-warning"
-            style={{ padding: '8px 12px', fontSize: '0.85rem', width: '100%', justifyContent: 'flex-start' }}
-            onClick={() => {
-              onToggleSwitch();
+        {/* Directional Move Pad (Nudge arrows) */}
+        <div>
+          <div
+            style={{
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              color: '#475569',
+              textAlign: 'center',
+              marginBottom: '6px',
+              textTransform: 'uppercase',
             }}
           >
-            <ToggleLeft size={16} />
-            <span>{component.state.isOpen ? 'Gạt ĐÓNG công tắc' : 'Gạt MỞ công tắc'}</span>
-          </button>
-        )}
+            Di chuyển vị trí
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '4px',
+              justifyItems: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <div />
+            {/* UP / NORTH */}
+            <button
+              className="btn-3d btn-neutral"
+              style={{
+                width: '38px',
+                height: '34px',
+                padding: 0,
+                borderRadius: '8px',
+              }}
+              onClick={() => onMoveDelta(0, -0.5)}
+              title="Di chuyển lên trên (Z −)"
+            >
+              <ArrowUp size={16} color="#0284c7" />
+            </button>
+            <div />
 
-        {/* Inspect / Learn */}
+            {/* LEFT / WEST */}
+            <button
+              className="btn-3d btn-neutral"
+              style={{
+                width: '38px',
+                height: '34px',
+                padding: 0,
+                borderRadius: '8px',
+              }}
+              onClick={() => onMoveDelta(-0.5, 0)}
+              title="Di chuyển sang trái (X −)"
+            >
+              <ArrowLeft size={16} color="#0284c7" />
+            </button>
+
+            {/* CENTER ICON */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#94a3b8',
+              }}
+            >
+              <Move size={16} />
+            </div>
+
+            {/* RIGHT / EAST */}
+            <button
+              className="btn-3d btn-neutral"
+              style={{
+                width: '38px',
+                height: '34px',
+                padding: 0,
+                borderRadius: '8px',
+              }}
+              onClick={() => onMoveDelta(0.5, 0)}
+              title="Di chuyển sang phải (X +)"
+            >
+              <ArrowRight size={16} color="#0284c7" />
+            </button>
+
+            <div />
+            {/* DOWN / SOUTH */}
+            <button
+              className="btn-3d btn-neutral"
+              style={{
+                width: '38px',
+                height: '34px',
+                padding: 0,
+                borderRadius: '8px',
+              }}
+              onClick={() => onMoveDelta(0, 0.5)}
+              title="Di chuyển xuống dưới (Z +)"
+            >
+              <ArrowDown size={16} color="#0284c7" />
+            </button>
+            <div />
+          </div>
+        </div>
+      </div>
+
+      {/* Switch Toggle (If Switch Component) */}
+      {component.type === 'switch' && onToggleSwitch && (
+        <button
+          className="btn-3d btn-warning"
+          style={{
+            padding: '8px 12px',
+            fontSize: '0.85rem',
+            width: '100%',
+            justifyContent: 'center',
+          }}
+          onClick={onToggleSwitch}
+        >
+          <ToggleLeft size={16} />
+          <span>{component.state.isOpen ? 'Gạt ĐÓNG công tắc' : 'Gạt MỞ công tắc'}</span>
+        </button>
+      )}
+
+      {/* Bottom Actions: Inspect & Delete */}
+      <div style={{ display: 'flex', gap: '6px' }}>
         <button
           className="btn-3d btn-neutral"
-          style={{ padding: '8px 12px', fontSize: '0.85rem', width: '100%', justifyContent: 'flex-start' }}
+          style={{
+            padding: '8px 10px',
+            fontSize: '0.8rem',
+            flex: 1,
+            justifyContent: 'center',
+          }}
           onClick={() => {
             sounds.playClick();
             onInspect();
           }}
+          title="Xem thông tin và nguyên lý của linh kiện"
         >
-          <Info size={16} color="#0284c7" />
-          <span>Tìm hiểu linh kiện</span>
+          <Info size={15} color="#0284c7" />
+          <span>Tìm hiểu</span>
         </button>
 
-        {/* Delete Component */}
         <button
           className="btn-3d btn-danger"
-          style={{ padding: '8px 12px', fontSize: '0.85rem', width: '100%', justifyContent: 'flex-start' }}
+          style={{
+            padding: '8px 10px',
+            fontSize: '0.8rem',
+            flex: 1,
+            justifyContent: 'center',
+          }}
           onClick={() => {
             sounds.playWireDisconnect();
             onDelete();
           }}
           title="Xóa linh kiện này khỏi bàn thí nghiệm"
         >
-          <Trash2 size={16} />
-          <span>Xóa linh kiện này</span>
+          <Trash2 size={15} />
+          <span>Xóa khối</span>
         </button>
       </div>
     </div>

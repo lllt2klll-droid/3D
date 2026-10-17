@@ -231,25 +231,43 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
 
               {/* Title & Role */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>
-                    {item.label}
-                  </span>
+                <div
+                  style={{
+                    fontWeight: 800,
+                    fontSize: '0.92rem',
+                    color: '#0f172a',
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {item.label}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
                   <span
                     style={{
                       fontSize: '0.65rem',
                       fontWeight: 800,
-                      padding: '2px 6px',
-                      borderRadius: '6px',
+                      padding: '1px 5px',
+                      borderRadius: '4px',
                       backgroundColor: item.tag === 'Nguồn' ? '#dbeafe' : item.tag === 'Nguồn xanh' ? '#dcfce7' : '#fef3c7',
                       color: item.tag === 'Nguồn' ? '#1d4ed8' : item.tag === 'Nguồn xanh' ? '#15803d' : '#b45309',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }}
                   >
                     {item.tag}
                   </span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {item.role}
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      color: '#64748b',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {item.role}
+                  </span>
                 </div>
               </div>
 

@@ -89,6 +89,7 @@ export class ThreeViewer {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.1;
+    this.renderer.domElement.style.touchAction = 'none';
     container.appendChild(this.renderer.domElement);
 
     // 4. OrbitControls Setup
@@ -291,6 +292,9 @@ export class ThreeViewer {
             this.isDraggingComp = true;
             this.controls.enabled = false; // Disable camera orbit while dragging component
             this.renderer.domElement.style.cursor = 'grabbing';
+            try {
+              this.renderer.domElement.setPointerCapture(e.pointerId);
+            } catch {}
           }
 
           this.callbacks.onComponentClick?.(compId);
@@ -304,7 +308,12 @@ export class ThreeViewer {
     this.callbacks.onEmptyClick?.();
   };
 
-  private onPointerUp = () => {
+  private onPointerUp = (e?: PointerEvent) => {
+    if (e && e.pointerId !== undefined) {
+      try {
+        this.renderer.domElement.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
     if (this.isDraggingComp && this.draggedCompId) {
       this.controls.enabled = true;
       const mesh = this.componentMeshes.get(this.draggedCompId);
@@ -399,12 +408,27 @@ export class ThreeViewer {
 
       // Update positions & rotation
       if (mesh) {
-        mesh.position.set(...comp.position);
+        if (!this.isDraggingComp || comp.id !== this.draggedCompId) {
+          mesh.position.set(...comp.position);
+        }
         if (comp.rotation) {
           mesh.rotation.y = comp.rotation[1];
         }
       }
     });
+  }
+
+  /**
+   * Move a component in 3D directly and immediately update connected wires
+   */
+  public moveComponent(compId: string, position: [number, number, number]) {
+    const mesh = this.componentMeshes.get(compId);
+    const comp = this.currentComponents.find((c) => c.id === compId);
+    if (!mesh || !comp) return;
+
+    mesh.position.set(...position);
+    comp.position = position;
+    this.wireRenderer.updateWires(this.currentWires, this.currentComponents);
   }
 
   /**

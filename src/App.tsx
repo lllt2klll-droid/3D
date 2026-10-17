@@ -188,7 +188,56 @@ export const App: React.FC = () => {
     }
   };
 
-  // Initialize ThreeViewer
+  // Stable callbacks ref for ThreeViewer to prevent recreation on state updates
+  const viewerCallbacksRef = useRef({
+    onTerminalClick: (_c: string, _t: string) => {},
+    onSwitchToggle: (_c: CircuitComponent) => {},
+    onComponentClick: (_c: string) => {},
+    onComponentMove: (_c: string, _p: [number, number, number]) => {},
+    onComponentMoveEnd: (_c: string, _p: [number, number, number]) => {},
+    onComponentRotate: (_c: string, _r: number) => {},
+    onWireClick: (_w: string) => {},
+    onEmptyClick: () => {},
+  });
+
+  // Keep callbacks ref updated with latest closures on each render
+  viewerCallbacksRef.current = {
+    onTerminalClick: (compId, termId) => {
+      handleTerminalClick(compId, termId);
+    },
+    onSwitchToggle: (comp) => {
+      handleToggleSwitch(comp.id);
+    },
+    onComponentClick: (compId) => {
+      sounds.playClick();
+      setSelectedComponentId(compId);
+    },
+    onComponentMove: (compId, pos) => {
+      setComponents((prev) =>
+        prev.map((c) => (c.id === compId ? { ...c, position: pos } : c))
+      );
+    },
+    onComponentMoveEnd: (compId, pos) => {
+      pushHistory();
+      setComponents((prev) =>
+        prev.map((c) => (c.id === compId ? { ...c, position: pos } : c))
+      );
+    },
+    onComponentRotate: (compId, rotY) => {
+      pushHistory();
+      setComponents((prev) =>
+        prev.map((c) => (c.id === compId ? { ...c, rotation: [0, rotY, 0] } : c))
+      );
+    },
+    onWireClick: (wireId) => {
+      handleDeleteWire(wireId);
+    },
+    onEmptyClick: () => {
+      setSelectedComponentId(null);
+    },
+  };
+
+  // Initialize ThreeViewer ONCE on mount
   useEffect(() => {
     if (!isWebGLAvailable()) {
       setHasWebGL(false);
@@ -198,39 +247,14 @@ export const App: React.FC = () => {
     if (!mountRef.current) return;
 
     const viewer = new ThreeViewer(mountRef.current, {
-      onTerminalClick: (compId, termId) => {
-        handleTerminalClick(compId, termId);
-      },
-      onSwitchToggle: (comp) => {
-        handleToggleSwitch(comp.id);
-      },
-      onComponentClick: (compId) => {
-        sounds.playClick();
-        setSelectedComponentId(compId);
-      },
-      onComponentMove: (compId, pos) => {
-        setComponents((prev) =>
-          prev.map((c) => (c.id === compId ? { ...c, position: pos } : c))
-        );
-      },
-      onComponentMoveEnd: (compId, pos) => {
-        pushHistory();
-        setComponents((prev) =>
-          prev.map((c) => (c.id === compId ? { ...c, position: pos } : c))
-        );
-      },
-      onComponentRotate: (compId, rotY) => {
-        pushHistory();
-        setComponents((prev) =>
-          prev.map((c) => (c.id === compId ? { ...c, rotation: [0, rotY, 0] } : c))
-        );
-      },
-      onWireClick: (wireId) => {
-        handleDeleteWire(wireId);
-      },
-      onEmptyClick: () => {
-        setSelectedComponentId(null);
-      },
+      onTerminalClick: (c, t) => viewerCallbacksRef.current.onTerminalClick(c, t),
+      onSwitchToggle: (c) => viewerCallbacksRef.current.onSwitchToggle(c),
+      onComponentClick: (c) => viewerCallbacksRef.current.onComponentClick(c),
+      onComponentMove: (c, p) => viewerCallbacksRef.current.onComponentMove(c, p),
+      onComponentMoveEnd: (c, p) => viewerCallbacksRef.current.onComponentMoveEnd(c, p),
+      onComponentRotate: (c, r) => viewerCallbacksRef.current.onComponentRotate(c, r),
+      onWireClick: (w) => viewerCallbacksRef.current.onWireClick(w),
+      onEmptyClick: () => viewerCallbacksRef.current.onEmptyClick(),
     });
 
     viewerRef.current = viewer;
@@ -239,7 +263,7 @@ export const App: React.FC = () => {
       viewer.dispose();
       viewerRef.current = null;
     };
-  }, [connectingTerminal, wires, pushHistory]);
+  }, []);
 
   // Sync components and wires into Three.js scene
   useEffect(() => {
@@ -297,6 +321,26 @@ export const App: React.FC = () => {
     if (!selectedComponentId || !viewerRef.current) return;
     viewerRef.current.rotateComponent(selectedComponentId, Math.PI / 4);
     sounds.playClick();
+  };
+
+  // Move selected component by (dx, dz) offset
+  const handleMoveSelectedComponentDelta = (dx: number, dz: number) => {
+    if (!selectedComponentId) return;
+    pushHistory();
+    sounds.playClick();
+    setComponents((prev) =>
+      prev.map((c) => {
+        if (c.id !== selectedComponentId) return c;
+        const nx = Math.max(-3.8, Math.min(3.8, Number((c.position[0] + dx).toFixed(2))));
+        const nz = Math.max(-3.0, Math.min(3.0, Number((c.position[2] + dz).toFixed(2))));
+        const newPos: [number, number, number] = [nx, c.position[1], nz];
+        viewerRef.current?.moveComponent(selectedComponentId, newPos);
+        return {
+          ...c,
+          position: newPos,
+        };
+      })
+    );
   };
 
   // Delete a wire
@@ -561,6 +605,7 @@ export const App: React.FC = () => {
         <ComponentActionWidget
           component={selectedCompObj}
           onRotate={handleRotateSelectedComponent}
+          onMoveDelta={handleMoveSelectedComponentDelta}
           onDelete={handleDeleteSelectedComponent}
           onInspect={() => {
             if (selectedCompObj) setInspectingItem(COMPONENT_CATALOG[selectedCompObj.type]);
@@ -645,7 +690,6 @@ export const App: React.FC = () => {
           {/* LAB MODE: Toolbar */}
           {currentMode === 'lab' && (
             <CircuitToolbar
-              onAddComponent={handleAddComponent}
               selectedWireColor={selectedWireColor}
               onSelectWireColor={setSelectedWireColor}
               onClearWires={handleClearWires}
@@ -657,15 +701,6 @@ export const App: React.FC = () => {
                 setConnectingTerminal(null);
                 viewerRef.current?.setSelectedTerminal(null);
               }}
-              selectedComponent={selectedCompObj}
-              onDeleteSelectedComponent={handleDeleteSelectedComponent}
-              onInspectSelectedComponent={() => {
-                if (selectedCompObj) setInspectingItem(COMPONENT_CATALOG[selectedCompObj.type]);
-              }}
-              onToggleSwitchComponent={() => {
-                if (selectedComponentId) handleToggleSwitch(selectedComponentId);
-              }}
-              onDeselectComponent={() => setSelectedComponentId(null)}
               canUndo={history.length > 0}
               onUndo={handleUndo}
             />
