@@ -20,6 +20,8 @@ import { sounds } from './audio/soundEffects';
 import { Navbar } from './components/Navbar';
 import { CircuitStatusAlert } from './components/CircuitStatusAlert';
 import { CircuitToolbar } from './components/CircuitToolbar';
+import { ComponentSidebar } from './components/ComponentSidebar';
+import { ComponentActionWidget } from './components/ComponentActionWidget';
 import { ComponentInfoModal } from './components/ComponentInfoModal';
 import { TemplatesModal } from './components/TemplatesModal';
 import { EnergyControls } from './components/EnergyControls';
@@ -71,8 +73,11 @@ export const App: React.FC = () => {
     return CIRCUIT_TEMPLATES[1].wires;
   });
 
-  // Selected Component for direct action (deletion / inspection)
+  // Selected Component for direct action (deletion / rotation / dragging)
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
+
+  // Left Component Sidebar Visibility
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
   // Undo History Stack
   const [history, setHistory] = useState<{ components: CircuitComponent[]; wires: Wire[] }[]>([]);
@@ -128,6 +133,61 @@ export const App: React.FC = () => {
     return updateComponentStates(components, circuitAnalysis);
   }, [components, circuitAnalysis]);
 
+  // Handle Terminal Click for Wire Connection
+  const handleTerminalClick = (compId: string, termId: string) => {
+    if (!connectingTerminal) {
+      // First click: select start terminal
+      sounds.playClick();
+      setConnectingTerminal({ compId, termId });
+      viewerRef.current?.setSelectedTerminal(`${compId}::${termId}`);
+    } else {
+      // Second click: create wire between start and end
+      if (
+        connectingTerminal.compId === compId &&
+        connectingTerminal.termId === termId
+      ) {
+        // Clicked same terminal again -> cancel
+        sounds.playClick();
+        setConnectingTerminal(null);
+        viewerRef.current?.setSelectedTerminal(null);
+        return;
+      }
+
+      // Check if wire already exists
+      const exists = wires.some(
+        (w) =>
+          (w.fromComponentId === connectingTerminal.compId &&
+            w.fromTerminalId === connectingTerminal.termId &&
+            w.toComponentId === compId &&
+            w.toTerminalId === termId) ||
+          (w.fromComponentId === compId &&
+            w.fromTerminalId === termId &&
+            w.toComponentId === connectingTerminal.compId &&
+            w.toTerminalId === connectingTerminal.termId)
+      );
+
+      if (!exists) {
+        pushHistory();
+        const newWire: Wire = {
+          id: `w-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          fromComponentId: connectingTerminal.compId,
+          fromTerminalId: connectingTerminal.termId,
+          toComponentId: compId,
+          toTerminalId: termId,
+          color: selectedWireColor,
+          hasCurrent: false,
+          currentDirection: 1,
+        };
+
+        sounds.playWireConnect();
+        setWires((prev) => [...prev, newWire]);
+      }
+
+      setConnectingTerminal(null);
+      viewerRef.current?.setSelectedTerminal(null);
+    }
+  };
+
   // Initialize ThreeViewer
   useEffect(() => {
     if (!isWebGLAvailable()) {
@@ -148,6 +208,23 @@ export const App: React.FC = () => {
         sounds.playClick();
         setSelectedComponentId(compId);
       },
+      onComponentMove: (compId, pos) => {
+        setComponents((prev) =>
+          prev.map((c) => (c.id === compId ? { ...c, position: pos } : c))
+        );
+      },
+      onComponentMoveEnd: (compId, pos) => {
+        pushHistory();
+        setComponents((prev) =>
+          prev.map((c) => (c.id === compId ? { ...c, position: pos } : c))
+        );
+      },
+      onComponentRotate: (compId, rotY) => {
+        pushHistory();
+        setComponents((prev) =>
+          prev.map((c) => (c.id === compId ? { ...c, rotation: [0, rotY, 0] } : c))
+        );
+      },
       onWireClick: (wireId) => {
         handleDeleteWire(wireId);
       },
@@ -162,7 +239,7 @@ export const App: React.FC = () => {
       viewer.dispose();
       viewerRef.current = null;
     };
-  }, []);
+  }, [connectingTerminal, wires, pushHistory]);
 
   // Sync components and wires into Three.js scene
   useEffect(() => {
@@ -215,58 +292,11 @@ export const App: React.FC = () => {
     );
   }, [pushHistory]);
 
-  // Handle Terminal Click for Wire Creation
-  const handleTerminalClick = (compId: string, termId: string) => {
-    if (!connectingTerminal) {
-      // First click: select start terminal
-      sounds.playClick();
-      setConnectingTerminal({ compId, termId });
-      viewerRef.current?.setSelectedTerminal(`${compId}::${termId}`);
-    } else {
-      // Second click: create wire between start and end
-      if (
-        connectingTerminal.compId === compId &&
-        connectingTerminal.termId === termId
-      ) {
-        // Clicked same terminal again -> cancel
-        setConnectingTerminal(null);
-        viewerRef.current?.setSelectedTerminal(null);
-        return;
-      }
-
-      // Check if wire already exists
-      const exists = wires.some(
-        (w) =>
-          (w.fromComponentId === connectingTerminal.compId &&
-            w.fromTerminalId === connectingTerminal.termId &&
-            w.toComponentId === compId &&
-            w.toTerminalId === termId) ||
-          (w.fromComponentId === compId &&
-            w.fromTerminalId === termId &&
-            w.toComponentId === connectingTerminal.compId &&
-            w.toTerminalId === connectingTerminal.termId)
-      );
-
-      if (!exists) {
-        pushHistory();
-        const newWire: Wire = {
-          id: `w-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          fromComponentId: connectingTerminal.compId,
-          fromTerminalId: connectingTerminal.termId,
-          toComponentId: compId,
-          toTerminalId: termId,
-          color: selectedWireColor,
-          hasCurrent: false,
-          currentDirection: 1,
-        };
-
-        sounds.playWireConnect();
-        setWires((prev) => [...prev, newWire]);
-      }
-
-      setConnectingTerminal(null);
-      viewerRef.current?.setSelectedTerminal(null);
-    }
+  // Rotate selected component 45 degrees
+  const handleRotateSelectedComponent = () => {
+    if (!selectedComponentId || !viewerRef.current) return;
+    viewerRef.current.rotateComponent(selectedComponentId, Math.PI / 4);
+    sounds.playClick();
   };
 
   // Delete a wire
@@ -517,6 +547,29 @@ export const App: React.FC = () => {
         >
           <CircuitStatusAlert analysis={circuitAnalysis} />
         </div>
+
+        {/* LEFT SIDEBAR: Rich Illustrated Components Drawer (in Lab mode) */}
+        {currentMode === 'lab' && (
+          <ComponentSidebar
+            onAddComponent={handleAddComponent}
+            isOpen={isSidebarOpen}
+            onToggleOpen={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
+        )}
+
+        {/* Selected Component Floating Action Widget (Rotate, Move & Delete) */}
+        <ComponentActionWidget
+          component={selectedCompObj}
+          onRotate={handleRotateSelectedComponent}
+          onDelete={handleDeleteSelectedComponent}
+          onInspect={() => {
+            if (selectedCompObj) setInspectingItem(COMPONENT_CATALOG[selectedCompObj.type]);
+          }}
+          onToggleSwitch={() => {
+            if (selectedComponentId) handleToggleSwitch(selectedComponentId);
+          }}
+          onDeselect={() => setSelectedComponentId(null)}
+        />
 
         {/* Explore Mode Component Selector Drawer (Left Side) */}
         {currentMode === 'explore' && (

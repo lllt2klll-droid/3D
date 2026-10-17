@@ -7,6 +7,8 @@ interface WireMeshRecord {
   group: THREE.Group;
   curve: THREE.Curve<THREE.Vector3>;
   tubeMesh: THREE.Mesh;
+  startPlug: THREE.Mesh;
+  endPlug: THREE.Mesh;
   particles: THREE.Mesh[];
   particleOffsets: number[];
 }
@@ -43,6 +45,7 @@ export class WireRenderer {
 
   /**
    * Calculate absolute world position of a component terminal
+   * Properly accounts for both component position and rotation (Y-axis)
    */
   public getTerminalWorldPosition(
     comp: CircuitComponent,
@@ -54,6 +57,10 @@ export class WireRenderer {
 
     // Terminal relative position
     const rel = new THREE.Vector3(...term.relativePosition);
+    if (comp.rotation && comp.rotation[1] !== 0) {
+      rel.applyAxisAngle(new THREE.Vector3(0, 1, 0), comp.rotation[1]);
+    }
+
     return basePos.clone().add(rel).add(new THREE.Vector3(0, 0.15, 0));
   }
 
@@ -101,6 +108,10 @@ export class WireRenderer {
         record.tubeMesh.geometry.dispose();
         record.tubeMesh.geometry = new THREE.TubeGeometry(curve, 28, 0.038, 8, false);
         record.tubeMesh.material = this.getWireMaterial(wire.color);
+
+        // Update plug positions to follow dragged component terminals
+        record.startPlug.position.copy(pStart);
+        record.endPlug.position.copy(pEnd);
 
         // Update particle visibility
         record.particles.forEach((p) => {
@@ -150,6 +161,8 @@ export class WireRenderer {
           group: wireGroup,
           curve,
           tubeMesh,
+          startPlug,
+          endPlug,
           particles,
           particleOffsets,
         });

@@ -16,6 +16,9 @@ export interface ViewerCallbacks {
   onTerminalClick?: (componentId: string, terminalId: string) => void;
   onSwitchToggle?: (comp: CircuitComponent) => void;
   onComponentClick?: (componentId: string) => void;
+  onComponentMove?: (componentId: string, position: [number, number, number]) => void;
+  onComponentMoveEnd?: (componentId: string, position: [number, number, number]) => void;
+  onComponentRotate?: (componentId: string, rotationY: number) => void;
   onWireClick?: (wireId: string) => void;
   onEmptyClick?: () => void;
 }
@@ -38,12 +41,23 @@ export class ThreeViewer {
   private wireRenderer: WireRenderer;
   private componentMeshes: Map<string, THREE.Object3D> = new Map();
 
+  // Cached components and wires for live dragging
+  private currentComponents: CircuitComponent[] = [];
+  private currentWires: Wire[] = [];
+
   // Raycasting & Interaction
   private raycaster: THREE.Raycaster;
   private mouse: THREE.Vector2;
   private callbacks: ViewerCallbacks = {};
   private hoveredHalo: THREE.Object3D | null = null;
   private selectedTerminalKey: string | null = null;
+
+  // Component Dragging State
+  private isDraggingComp: boolean = false;
+  private draggedCompId: string | null = null;
+  private dragPlane: THREE.Plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  private dragOffset: THREE.Vector3 = new THREE.Vector3();
+  private dragPlaneHit: THREE.Vector3 = new THREE.Vector3();
 
   // Animation Loop
   private animFrameId: number | null = null;
@@ -57,7 +71,7 @@ export class ThreeViewer {
 
     // 1. Scene Setup
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xf6f9fc); // Bright clean sky tint
+    this.scene.background = new THREE.Color(0xf6f9fc);
 
     // 2. Camera Setup (Isometric pedagogical angle)
     const aspect = container.clientWidth / Math.max(container.clientHeight, 1);
@@ -81,10 +95,10 @@ export class ThreeViewer {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    this.controls.target.set(0, 0.6, 0);
+    this.controls.target.set(0, 0.5, 0);
     this.controls.minDistance = 2.5;
     this.controls.maxDistance = 14;
-    this.controls.maxPolarAngle = Math.PI / 2 - 0.06; // Prevent looking below ground plane
+    this.controls.maxPolarAngle = Math.PI / 2 - 0.06;
 
     // 5. Lighting Setup
     this.ambientLight = new THREE.AmbientLight(0xffffff, 1.25);
@@ -95,21 +109,14 @@ export class ThreeViewer {
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.width = 1024;
     this.sunLight.shadow.mapSize.height = 1024;
-    this.sunLight.shadow.camera.near = 0.5;
-    this.sunLight.shadow.camera.far = 25;
-    this.sunLight.shadow.camera.left = -5;
-    this.sunLight.shadow.camera.right = 5;
-    this.sunLight.shadow.camera.top = 5;
-    this.sunLight.shadow.camera.bottom = -5;
     this.sunLight.shadow.bias = -0.0005;
     this.scene.add(this.sunLight);
 
-    // Fill soft light
     const fillLight = new THREE.DirectionalLight(0xbae6fd, 0.6);
     fillLight.position.set(-5, 4, -5);
     this.scene.add(fillLight);
 
-    // 6. Base Diorama Island
+    // 6. Base Clean Workbench
     this.diorama = createBaseDiorama();
     this.scene.add(this.diorama);
 
@@ -132,6 +139,8 @@ export class ThreeViewer {
   private initEventListeners() {
     this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown);
     this.renderer.domElement.addEventListener('pointermove', this.onPointerMove);
+    window.addEventListener('pointerup', this.onPointerUp);
+    window.addEventListener('pointercancel', this.onPointerUp);
     window.addEventListener('resize', this.onWindowResize);
   }
 
@@ -155,11 +164,39 @@ export class ThreeViewer {
     this.mouse = this.getNormalizedMouse(e);
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
+    // If currently dragging a component across the table
+    if (this.isDraggingComp && this.draggedCompId) {
+      if (this.raycaster.ray.intersectPlane(this.dragPlane, this.dragPlaneHit)) {
+        const target = this.dragPlaneHit.clone().add(this.dragOffset);
+        // Clamp inside spacious workbench boundary
+        const cx = THREE.MathUtils.clamp(target.x, -3.8, 3.8);
+        const cz = THREE.MathUtils.clamp(target.z, -3.0, 3.0);
+
+        const mesh = this.componentMeshes.get(this.draggedCompId);
+        if (mesh) {
+          mesh.position.set(cx, 0, cz);
+        }
+
+        // Update cached position for immediate wire curve re-calculation
+        const found = this.currentComponents.find((c) => c.id === this.draggedCompId);
+        if (found) {
+          found.position = [cx, 0, cz];
+          this.wireRenderer.updateWires(this.currentWires, this.currentComponents);
+        }
+
+        this.renderer.domElement.style.cursor = 'grabbing';
+        this.callbacks.onComponentMove?.(this.draggedCompId, [cx, 0, cz]);
+      }
+      return;
+    }
+
     const intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
     // Reset previous hover highlight (except currently selected terminal)
     if (this.hoveredHalo && this.hoveredHalo.name !== `halo::${this.selectedTerminalKey}`) {
-      this.hoveredHalo.visible = false;
+      if (!this.selectedTerminalKey) {
+        this.hoveredHalo.visible = false;
+      }
       this.hoveredHalo = null;
     }
 
@@ -177,8 +214,8 @@ export class ThreeViewer {
           }
           break;
         }
-        if (obj.name.startsWith('lever::')) {
-          this.renderer.domElement.style.cursor = 'pointer';
+        if (obj.name.startsWith('lever::') || this.componentMeshes.has(obj.name)) {
+          this.renderer.domElement.style.cursor = 'grab';
           return;
         }
         obj = obj.parent;
@@ -190,7 +227,6 @@ export class ThreeViewer {
   };
 
   private onPointerDown = (e: PointerEvent) => {
-    // Only respond to primary mouse click / single touch
     if (e.button !== 0) return;
 
     this.mouse = this.getNormalizedMouse(e);
@@ -198,27 +234,27 @@ export class ThreeViewer {
 
     const intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
+    // 1. HIGHEST PRIORITY: Check for terminal hits first!
+    // This guarantees clicking terminals for wire connection is 100% reliable!
     for (const hit of intersects) {
       let obj: THREE.Object3D | null = hit.object;
-
-      // Check if user clicked a wire
-      if (hit.object.userData && hit.object.userData.wireId) {
-        this.callbacks.onWireClick?.(hit.object.userData.wireId);
-        return;
-      }
-
       while (obj && obj !== this.scene) {
-        // 1. Clicked Terminal Pin
         if (obj.name.startsWith('terminal::')) {
+          e.stopPropagation();
           const parts = obj.name.split('::');
-          const compId = parts[1];
-          const termId = parts[2];
-          this.callbacks.onTerminalClick?.(compId, termId);
+          this.callbacks.onTerminalClick?.(parts[1], parts[2]);
           return;
         }
+        obj = obj.parent;
+      }
+    }
 
-        // 2. Clicked Switch Lever
+    // 2. SECOND PRIORITY: Check for knife switch lever toggle
+    for (const hit of intersects) {
+      let obj: THREE.Object3D | null = hit.object;
+      while (obj && obj !== this.scene) {
         if (obj.name.startsWith('lever::')) {
+          e.stopPropagation();
           const compId = obj.name.split('::')[1];
           const switchMesh = this.componentMeshes.get(compId) as SwitchObject;
           if (switchMesh && switchMesh.toggleLever) {
@@ -226,20 +262,80 @@ export class ThreeViewer {
           }
           return;
         }
-
-        // 3. Clicked Component Body
-        if (this.componentMeshes.has(obj.name)) {
-          this.callbacks.onComponentClick?.(obj.name);
-          return;
-        }
-
         obj = obj.parent;
       }
     }
 
-    // Clicked empty surface
+    // 3. THIRD PRIORITY: Check if user clicked an existing wire
+    for (const hit of intersects) {
+      if (hit.object.userData && hit.object.userData.wireId) {
+        e.stopPropagation();
+        this.callbacks.onWireClick?.(hit.object.userData.wireId);
+        return;
+      }
+    }
+
+    // 4. FOURTH PRIORITY: Component Body clicked -> Start drag & select component!
+    for (const hit of intersects) {
+      let obj: THREE.Object3D | null = hit.object;
+      while (obj && obj !== this.scene) {
+        if (this.componentMeshes.has(obj.name)) {
+          e.stopPropagation();
+          const compId = obj.name;
+          const mesh = this.componentMeshes.get(compId)!;
+
+          // Start dragging component across plane y = 0
+          if (this.raycaster.ray.intersectPlane(this.dragPlane, this.dragPlaneHit)) {
+            this.dragOffset.subVectors(mesh.position, this.dragPlaneHit);
+            this.draggedCompId = compId;
+            this.isDraggingComp = true;
+            this.controls.enabled = false; // Disable camera orbit while dragging component
+            this.renderer.domElement.style.cursor = 'grabbing';
+          }
+
+          this.callbacks.onComponentClick?.(compId);
+          return;
+        }
+        obj = obj.parent;
+      }
+    }
+
+    // Clicked empty surface on table
     this.callbacks.onEmptyClick?.();
   };
+
+  private onPointerUp = () => {
+    if (this.isDraggingComp && this.draggedCompId) {
+      this.controls.enabled = true;
+      const mesh = this.componentMeshes.get(this.draggedCompId);
+      if (mesh) {
+        this.callbacks.onComponentMoveEnd?.(this.draggedCompId, [
+          mesh.position.x,
+          mesh.position.y,
+          mesh.position.z,
+        ]);
+      }
+      this.isDraggingComp = false;
+      this.draggedCompId = null;
+      this.renderer.domElement.style.cursor = 'default';
+    }
+  };
+
+  /**
+   * Rotate a component in 3D by deltaAngleRad (default: 45 degrees)
+   */
+  public rotateComponent(compId: string, deltaAngleRad: number = Math.PI / 4) {
+    const mesh = this.componentMeshes.get(compId);
+    const comp = this.currentComponents.find((c) => c.id === compId);
+    if (!mesh || !comp) return;
+
+    mesh.rotation.y = (mesh.rotation.y + deltaAngleRad) % (Math.PI * 2);
+    comp.rotation = [0, mesh.rotation.y, 0];
+
+    // Immediately update connected wires
+    this.wireRenderer.updateWires(this.currentWires, this.currentComponents);
+    this.callbacks.onComponentRotate?.(compId, mesh.rotation.y);
+  }
 
   /**
    * Sync components list from state
@@ -248,6 +344,7 @@ export class ThreeViewer {
     components: CircuitComponent[],
     onSwitchToggle?: (comp: CircuitComponent) => void
   ) {
+    this.currentComponents = components;
     const activeIds = new Set(components.map((c) => c.id));
 
     // Remove components that are no longer in the list
@@ -300,9 +397,12 @@ export class ThreeViewer {
         }
       }
 
-      // Update positions
+      // Update positions & rotation
       if (mesh) {
         mesh.position.set(...comp.position);
+        if (comp.rotation) {
+          mesh.rotation.y = comp.rotation[1];
+        }
       }
     });
   }
@@ -311,6 +411,8 @@ export class ThreeViewer {
    * Sync wires from state
    */
   public syncWires(wires: Wire[], components: CircuitComponent[]) {
+    this.currentWires = wires;
+    this.currentComponents = components;
     this.wireRenderer.updateWires(wires, components);
   }
 
@@ -333,14 +435,14 @@ export class ThreeViewer {
       const startHalo = this.scene.getObjectByName(`halo::${key}`);
       if (startHalo) {
         startHalo.visible = true;
-        startHalo.scale.set(1.4, 1.4, 1.4);
+        startHalo.scale.set(1.45, 1.45, 1.45);
       }
 
       // Highlight all other candidate terminals with cyan so the user immediately sees all targets
       this.scene.traverse((obj) => {
         if (obj.name && obj.name.startsWith('halo::') && obj.name !== `halo::${key}`) {
           obj.visible = true;
-          obj.scale.set(1.15, 1.15, 1.15);
+          obj.scale.set(1.2, 1.2, 1.2);
         }
       });
     }
@@ -359,7 +461,7 @@ export class ThreeViewer {
    */
   public resetCamera() {
     this.camera.position.set(5.5, 6.0, 6.5);
-    this.controls.target.set(0, 0.6, 0);
+    this.controls.target.set(0, 0.5, 0);
     this.controls.update();
   }
 
@@ -386,15 +488,9 @@ export class ThreeViewer {
       // Controls damping
       this.controls.update();
 
-      // Update diorama environment
-      this.diorama.updateEnvironment(this.energyEnv.sunlight, this.energyEnv.windSpeed, delta);
-
       // Update dynamic states of components
       for (const mesh of this.componentMeshes.values()) {
         const anyMesh = mesh as unknown as Record<string, unknown>;
-        if (typeof anyMesh.updateBulbState === 'function') {
-          // Dynamic bulb state is updated via syncComponents
-        }
         if (typeof anyMesh.updateMotorState === 'function') {
           const compId = mesh.name;
           const fakeComp = {
@@ -482,6 +578,8 @@ export class ThreeViewer {
       cancelAnimationFrame(this.animFrameId);
     }
     window.removeEventListener('resize', this.onWindowResize);
+    window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointercancel', this.onPointerUp);
     this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDown);
     this.renderer.domElement.removeEventListener('pointermove', this.onPointerMove);
 
