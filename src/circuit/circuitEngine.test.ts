@@ -62,6 +62,7 @@ console.log('--- BẮT ĐẦU KIỂM THỬ HỆ THỐNG MẠCH ĐIỆN STEM 3D -
   assert(!res.isClosedCircuit, 'Khi công tắc MỞ (OFF), mạch phải hở');
   assert(!res.poweredComponentIds.includes('bulb-1'), 'Bóng đèn phải tắt khi công tắc mở');
   assert(res.pedagogicalHint.includes('công tắc'), 'Gợi ý sư phạm phải nhắc đến việc đóng công tắc');
+  assert(wires.every((wire) => !wire.hasCurrent && wire.currentDirection === 0), 'Mạch hở không hiển thị chiều dòng điện');
 }
 
 // Test 3: Battery with Closed Switch and Bulb (Switch ON)
@@ -83,10 +84,10 @@ console.log('--- BẮT ĐẦU KIỂM THỬ HỆ THỐNG MẠCH ĐIỆN STEM 3D -
     },
     {
       id: 'w2',
-      fromComponentId: 'sw-1',
-      fromTerminalId: 't2',
-      toComponentId: 'bulb-1',
-      toTerminalId: 't1',
+      fromComponentId: 'bulb-1',
+      fromTerminalId: 't1',
+      toComponentId: 'sw-1',
+      toTerminalId: 't2',
       color: 'red',
       hasCurrent: false,
       currentDirection: 1,
@@ -108,6 +109,13 @@ console.log('--- BẮT ĐẦU KIỂM THỬ HỆ THỐNG MẠCH ĐIỆN STEM 3D -
   assert(res.poweredComponentIds.includes('bulb-1'), 'Bóng đèn phải được cấp điện và phát sáng');
   assert(!res.isShortCircuit, 'Mạch có tải (bóng đèn) không bị chập mạch');
   assert(wires.every((w) => w.hasCurrent), 'Tất cả các đoạn dây trong mạch kín phải có dòng điện');
+  assert(
+    wires[0].currentDirection === 1 &&
+      wires[1].currentDirection === -1 &&
+      wires[2].currentDirection === 1,
+    'Chiều dòng điện quy ước phải đi từ cực dương qua tải về cực âm, kể cả dây được khai báo ngược đầu'
+  );
+  assert(res.pedagogicalHint.includes('cực dương (+)') && res.pedagogicalHint.includes('cực âm (−)'), 'Gợi ý mạch kín giải thích chiều dòng điện quy ước');
 }
 
 // Test 4: Short Circuit Detection (Dangerous directly shorted battery)

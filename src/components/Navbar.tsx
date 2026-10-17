@@ -121,6 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             STEM 3D
           </div>
           <div
+            className="hide-on-mobile"
             style={{
               fontSize: '0.75rem',
               fontWeight: 600,
@@ -135,6 +136,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mode Navigation Tabs */}
       <nav
         className="app-navbar-modes"
+        aria-label="Chế độ hoạt động"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -181,7 +183,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </nav>
 
       {/* Global Utilities */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="app-navbar-utilities" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button
           className="btn-3d btn-neutral"
           style={{ padding: '8px 12px', fontSize: '0.85rem' }}
@@ -200,15 +202,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           style={{ padding: '8px 10px' }}
           onClick={handleToggleSound}
           title={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+          aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
         >
           {isMuted ? <VolumeX size={18} color="#ef4444" /> : <Volume2 size={18} color="#0284c7" />}
         </button>
 
         <button
-          className="btn-3d btn-neutral"
+          className="btn-3d btn-neutral hide-on-mobile"
           style={{ padding: '8px 10px' }}
           onClick={handleToggleFullscreen}
           title="Toàn màn hình"
+          aria-label="Toàn màn hình"
         >
           {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
         </button>
@@ -225,6 +229,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           }}
           onClick={onToggleDayNight}
           title={isNightMode ? 'Chuyển sang ban ngày ☀️' : 'Chuyển sang ban đêm 🌙'}
+          aria-label={isNightMode ? 'Chuyển sang ban ngày' : 'Chuyển sang ban đêm'}
         >
           {isNightMode
             ? <Sun size={18} color="#fde047" />
@@ -234,13 +239,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           className="btn-3d btn-primary"
           style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+          title="Hướng dẫn"
+          aria-label="Hướng dẫn"
           onClick={() => {
             sounds.playClick();
             onOpenHelp();
           }}
         >
           <HelpCircle size={16} />
-          <span>Hướng dẫn</span>
+          <span className="hide-on-mobile">Hướng dẫn</span>
         </button>
       </div>
     </header>

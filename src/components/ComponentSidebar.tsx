@@ -292,7 +292,7 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
           </p>
 
           {/* Category Filter Pills */}
-          <div style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap' }}>
+          <div className="sidebar-category-filter" style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap' }}>
             {[
               { id: 'all', label: 'Tất cả' },
               { id: 'source', label: 'Nguồn' },

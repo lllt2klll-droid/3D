@@ -18,7 +18,6 @@ import { sounds } from './audio/soundEffects';
 
 // UI Components
 import { Navbar } from './components/Navbar';
-import { CircuitStatusAlert } from './components/CircuitStatusAlert';
 import { CircuitToolbar } from './components/CircuitToolbar';
 import { ComponentSidebar } from './components/ComponentSidebar';
 import { ComponentActionWidget } from './components/ComponentActionWidget';
@@ -77,7 +76,9 @@ export const App: React.FC = () => {
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
 
   // Left Component Sidebar Visibility
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(
+    () => typeof window === 'undefined' || window.innerWidth > 640
+  );
 
   // Undo History Stack
   const [history, setHistory] = useState<{ components: CircuitComponent[]; wires: Wire[] }[]>([]);
@@ -607,6 +608,8 @@ export const App: React.FC = () => {
 
   return (
     <div
+      className="app-shell"
+      data-theme={isNightMode ? 'night' : 'day'}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -653,22 +656,6 @@ export const App: React.FC = () => {
           }}
         />
 
-        {/* Top-Floating Realtime Circuit Status Bar */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '12px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 'calc(100% - 32px)',
-            maxWidth: '680px',
-            zIndex: 20,
-            pointerEvents: 'auto',
-          }}
-        >
-          <CircuitStatusAlert analysis={circuitAnalysis} />
-        </div>
-
         {/* LEFT SIDEBAR: Rich Illustrated Components Drawer (in Lab mode) */}
         {currentMode === 'lab' && (
           <ComponentSidebar
@@ -705,7 +692,7 @@ export const App: React.FC = () => {
         {/* Explore Mode Component Selector Drawer (Left Side) */}
         {currentMode === 'explore' && (
           <div
-            className="stem-card"
+            className="stem-card explore-component-picker"
             style={{
               position: 'absolute',
               top: '80px',
@@ -759,6 +746,7 @@ export const App: React.FC = () => {
 
         {/* Bottom Control Panels depending on Mode */}
         <div
+          className="mode-controls"
           style={{
             position: 'absolute',
             bottom: '12px',

@@ -56,6 +56,11 @@ export function analyzeCircuit(
   wires: Wire[],
   energyEnv?: { sunlight: number; windSpeed: number }
 ): CircuitAnalysisResult {
+  wires.forEach((wire) => {
+    wire.hasCurrent = false;
+    wire.currentDirection = 0;
+  });
+
   // Sync environmental values into components if provided
   if (energyEnv) {
     components.forEach((c) => {
@@ -142,6 +147,17 @@ export function analyzeCircuit(
   let shortCircuitFound = false;
   const activeLoops: string[][] = [];
   const poweredCompSet = new Set<string>();
+  const activeWireDirections = new Map<string, 1 | -1>();
+
+  const wireByTerminalPair = new Map<string, Wire[]>();
+  wires.forEach((wire) => {
+    const from = termKey(wire.fromComponentId, wire.fromTerminalId);
+    const to = termKey(wire.toComponentId, wire.toTerminalId);
+    const pairKey = [from, to].sort().join('|');
+    const pairWires = wireByTerminalPair.get(pairKey) ?? [];
+    pairWires.push(wire);
+    wireByTerminalPair.set(pairKey, pairWires);
+  });
 
   // Check each power source for closed loops between its positive and negative terminals
   for (const src of powerSources) {
@@ -194,6 +210,19 @@ export function analyzeCircuit(
         } else {
           activeLoops.push(Array.from(compsInPath));
           compsInPath.forEach((id) => poweredCompSet.add(id));
+
+          for (let index = 0; index < pathCopy.length - 1; index++) {
+            const fromNode = pathCopy[index];
+            const toNode = pathCopy[index + 1];
+            const pairKey = [fromNode, toNode].sort().join('|');
+            const connectedWires = wireByTerminalPair.get(pairKey) ?? [];
+
+            connectedWires.forEach((wire) => {
+              if (activeWireDirections.has(wire.id)) return;
+              const wireStart = termKey(wire.fromComponentId, wire.fromTerminalId);
+              activeWireDirections.set(wire.id, fromNode === wireStart ? 1 : -1);
+            });
+          }
         }
       } else {
         const neighbors = adj.get(currentNode) || [];
@@ -211,21 +240,11 @@ export function analyzeCircuit(
     dfs(startNode);
   }
 
-  // Update wire current status
+  // Conventional current flows from the source's positive terminal to its negative terminal.
   wires.forEach((w) => {
-    const k1 = termKey(w.fromComponentId, w.fromTerminalId);
-    const k2 = termKey(w.toComponentId, w.toTerminalId);
-    let wireInActiveLoop = false;
-
-    for (const loop of activeLoops) {
-      if (loop.includes(w.fromComponentId) && loop.includes(w.toComponentId)) {
-        wireInActiveLoop = true;
-        break;
-      }
-    }
-
-    w.hasCurrent = !shortCircuitFound && wireInActiveLoop;
-    w.currentDirection = w.hasCurrent ? 1 : 0;
+    const direction = activeWireDirections.get(w.id);
+    w.currentDirection = !shortCircuitFound && direction !== undefined ? direction : 0;
+    w.hasCurrent = w.currentDirection !== 0;
   });
 
   // Short circuit has highest priority warning
@@ -272,7 +291,7 @@ export function analyzeCircuit(
       statusMessage: desc.trim(),
       statusType: 'success',
       pedagogicalHint:
-        'Chúc mừng em! Nguồn điện tạo ra dòng điện liên tục chạy qua các thiết bị và quay trở lại nguồn thành một vòng kín.',
+        'Chúc mừng em! Dòng điện quy ước đi từ cực dương (+) của nguồn, qua các thiết bị rồi trở về cực âm (−), tạo thành một vòng kín.',
     };
   }
 

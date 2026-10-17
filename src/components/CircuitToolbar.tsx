@@ -49,6 +49,7 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
 
   return (
     <div
+      className="circuit-toolbar"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -88,7 +89,7 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
 
       {/* Main Control Bar: Wire Colors & Table Management */}
       <div
-        className="stem-card"
+        className="stem-card circuit-toolbar-main"
         style={{
           padding: '8px 14px',
           display: 'flex',
@@ -101,6 +102,7 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
       >
         {/* Wire Color Picker */}
         <div
+          className="wire-color-picker"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -121,6 +123,8 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
                   onSelectWireColor(wc.id);
                 }}
                 title={wc.label}
+                aria-label={`Chọn màu dây ${wc.label}`}
+                aria-pressed={isSelected}
                 style={{
                   width: '28px',
                   height: '28px',
@@ -138,7 +142,7 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
         </div>
 
         {/* Quick Table Actions: Undo, Clear Wires, Reset */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="circuit-toolbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {canUndo && (
             <button
               className="btn-3d btn-neutral"
@@ -184,7 +188,7 @@ export const CircuitToolbar: React.FC<CircuitToolbarProps> = ({
 
       {/* 1-Click Quick Preset Circuits Bar (Convenient!) */}
       <div
-        className="stem-card"
+        className="stem-card circuit-template-bar"
         style={{
           padding: '6px 14px',
           display: 'flex',

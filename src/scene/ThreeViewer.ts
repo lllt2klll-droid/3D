@@ -17,6 +17,65 @@ import { createPotentiometerMesh, PotentiometerObject } from './models/Potentiom
 import { createFuseMesh, FuseObject } from './models/FuseModel';
 import { createLedMesh, LedObject } from './models/LedModel';
 
+const polarityMaterials = new Map<'positive' | 'negative', THREE.SpriteMaterial>();
+
+function getPolarityMaterial(polarity: 'positive' | 'negative'): THREE.SpriteMaterial {
+  const cachedMaterial = polarityMaterials.get(polarity);
+  if (cachedMaterial) return cachedMaterial;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Unable to create canvas context for terminal polarity labels.');
+
+  context.beginPath();
+  context.arc(32, 32, 29, 0, Math.PI * 2);
+  context.fillStyle = polarity === 'positive' ? '#dc2626' : '#334155';
+  context.fill();
+  context.lineWidth = 5;
+  context.strokeStyle = '#ffffff';
+  context.stroke();
+  context.fillStyle = '#ffffff';
+  context.font = 'bold 44px Arial, sans-serif';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(polarity === 'positive' ? '+' : '−', 32, 33);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+  });
+  polarityMaterials.set(polarity, material);
+  return material;
+}
+
+function addPolarityLabels(mesh: THREE.Object3D, comp: CircuitComponent) {
+  comp.terminals.forEach((terminal) => {
+    let polarity: 'positive' | 'negative' | null = null;
+    if (terminal.polarity === 'positive' || terminal.polarity === 'anode') {
+      polarity = 'positive';
+    } else if (terminal.polarity === 'negative' || terminal.polarity === 'cathode') {
+      polarity = 'negative';
+    }
+    if (!polarity) return;
+
+    const label = new THREE.Sprite(getPolarityMaterial(polarity));
+    label.name = `polarity-label::${comp.id}::${terminal.id}`;
+    label.position.set(
+      terminal.relativePosition[0],
+      terminal.relativePosition[1] + 0.34,
+      terminal.relativePosition[2]
+    );
+    label.scale.set(0.28, 0.28, 1);
+    label.renderOrder = 2;
+    mesh.add(label);
+  });
+}
+
 export interface ViewerCallbacks {
   onTerminalClick?: (componentId: string, terminalId: string) => void;
   onSwitchToggle?: (comp: CircuitComponent) => void;
@@ -485,6 +544,7 @@ export class ThreeViewer {
         }
 
         if (mesh) {
+          addPolarityLabels(mesh, comp);
           this.componentGroup.add(mesh);
           this.componentMeshes.set(comp.id, mesh);
         }

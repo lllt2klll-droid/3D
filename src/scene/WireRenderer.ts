@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { Wire, CircuitComponent, WireColor } from '../types';
 import { MATERIALS } from './materials';
 
+const ARROW_FORWARD = new THREE.Vector3(0, 1, 0);
+
 interface WireMeshRecord {
   wireId: string;
   group: THREE.Group;
@@ -9,8 +11,10 @@ interface WireMeshRecord {
   tubeMesh: THREE.Mesh;
   startPlug: THREE.Mesh;
   endPlug: THREE.Mesh;
+  particleGeometry: THREE.BufferGeometry;
   particles: THREE.Mesh[];
   particleOffsets: number[];
+  currentDirection: 1 | -1 | 0;
 }
 
 export class WireRenderer {
@@ -78,6 +82,7 @@ export class WireRenderer {
       if (!activeWireIds.has(id)) {
         this.group.remove(record.group);
         record.tubeMesh.geometry.dispose();
+        record.particleGeometry.dispose();
         this.wireRecords.delete(id);
       }
     }
@@ -117,6 +122,7 @@ export class WireRenderer {
         record.particles.forEach((p) => {
           p.visible = wire.hasCurrent;
         });
+        record.currentDirection = wire.currentDirection;
       } else {
         const wireGroup = new THREE.Group();
         wireGroup.name = `wire::${wire.id}`;
@@ -141,12 +147,12 @@ export class WireRenderer {
         endPlug.position.copy(pEnd);
         wireGroup.add(endPlug);
 
-        // Flowing current particles (yellow glowing mini-spheres)
+        // Moving arrowheads make the conventional current direction visible.
         const particleCount = Math.max(4, Math.floor(dist * 2.5));
         const particles: THREE.Mesh[] = [];
         const particleOffsets: number[] = [];
 
-        const particleGeo = new THREE.SphereGeometry(0.06, 12, 12);
+        const particleGeo = new THREE.ConeGeometry(0.065, 0.16, 8);
         for (let i = 0; i < particleCount; i++) {
           const p = new THREE.Mesh(particleGeo, MATERIALS.currentParticle);
           p.visible = wire.hasCurrent;
@@ -163,8 +169,10 @@ export class WireRenderer {
           tubeMesh,
           startPlug,
           endPlug,
+          particleGeometry: particleGeo,
           particles,
           particleOffsets,
+          currentDirection: wire.currentDirection,
         });
       }
     });
@@ -180,8 +188,14 @@ export class WireRenderer {
         if (!p.visible) continue;
 
         record.particleOffsets[i] = (record.particleOffsets[i] + flowSpeed * delta) % 1.0;
-        const pos = record.curve.getPoint(record.particleOffsets[i]);
+        const progress = record.currentDirection === -1
+          ? 1 - record.particleOffsets[i]
+          : record.particleOffsets[i];
+        const pos = record.curve.getPoint(progress);
         p.position.copy(pos);
+        const tangent = record.curve.getTangentAt(progress);
+        if (record.currentDirection === -1) tangent.negate();
+        p.quaternion.setFromUnitVectors(ARROW_FORWARD, tangent);
       }
     }
   }
@@ -190,6 +204,7 @@ export class WireRenderer {
     for (const record of this.wireRecords.values()) {
       this.group.remove(record.group);
       record.tubeMesh.geometry.dispose();
+      record.particleGeometry.dispose();
     }
     this.wireRecords.clear();
   }
