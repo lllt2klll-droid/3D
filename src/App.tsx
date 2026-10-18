@@ -20,6 +20,7 @@ import { sounds } from './audio/soundEffects';
 import { Navbar } from './components/Navbar';
 import { CircuitToolbar } from './components/CircuitToolbar';
 import { ComponentSidebar } from './components/ComponentSidebar';
+import { ExploreAnnotation } from './components/ExploreAnnotation';
 import { ComponentActionWidget } from './components/ComponentActionWidget';
 import { ComponentInfoModal } from './components/ComponentInfoModal';
 import { TemplatesModal } from './components/TemplatesModal';
@@ -29,7 +30,6 @@ import { HelpGuideModal } from './components/HelpGuideModal';
 import { ConfettiCelebration } from './components/ConfettiCelebration';
 
 import {
-  Eye,
   AlertCircle,
 } from 'lucide-react';
 
@@ -214,6 +214,7 @@ export const App: React.FC = () => {
       handleToggleSwitch(comp.id);
     },
     onComponentClick: (compId) => {
+      if (currentMode === 'explore') return;
       sounds.playClick();
       setSelectedComponentId(compId);
     },
@@ -238,7 +239,7 @@ export const App: React.FC = () => {
       handleDeleteWire(wireId);
     },
     onEmptyClick: () => {
-      setSelectedComponentId(null);
+      if (currentMode !== 'explore') setSelectedComponentId(null);
     },
   };
 
@@ -273,6 +274,7 @@ export const App: React.FC = () => {
   // Sync components and wires into Three.js scene
   useEffect(() => {
     if (!viewerRef.current) return;
+    viewerRef.current.setExploreMode(currentMode === 'explore');
     viewerRef.current.syncComponents(activeComponents, (sw) => {
       if (sw.type === 'switch') handleToggleSwitch(sw.id);
       if (sw.type === 'push_button') handleTogglePushButton(sw.id);
@@ -280,7 +282,15 @@ export const App: React.FC = () => {
     viewerRef.current.syncWires(wires, activeComponents);
     viewerRef.current.updateAllComponentStates(activeComponents);
     viewerRef.current.updateEnergyEnv(sunlight, windSpeed);
-  }, [activeComponents, wires, sunlight, windSpeed]);
+  }, [activeComponents, currentMode, wires, sunlight, windSpeed]);
+
+  useEffect(() => {
+    if (currentMode !== 'explore') return;
+    const exploreComponent = activeComponents.find(
+      (component) => component.id === `explore-${selectedExploreType}`
+    );
+    if (exploreComponent) viewerRef.current?.focusOnComponent(exploreComponent);
+  }, [activeComponents, currentMode, selectedExploreType]);
 
   // Audio effects when circuit closes/opens or shorts
   const prevClosedRef = useRef(false);
@@ -518,13 +528,11 @@ export const App: React.FC = () => {
   // Load Explore Component
   const handleSelectExploreComponent = (type: ComponentType) => {
     setSelectedExploreType(type);
+    if (window.innerWidth <= 640) setIsSidebarOpen(false);
     const comp = createComponent(type, `explore-${type}`, [0, 0, 0]);
     setComponents([comp]);
     setWires([]);
-    setInspectingItem(COMPONENT_CATALOG[type]);
-    if (viewerRef.current) {
-      viewerRef.current.focusOnComponent(comp);
-    }
+    setInspectingItem(null);
   };
 
   // Load a Challenge
@@ -604,7 +612,12 @@ export const App: React.FC = () => {
     );
   }
 
-  const selectedCompObj = activeComponents.find((c) => c.id === selectedComponentId) || null;
+  const selectedCompObj = currentMode === 'lab'
+    ? activeComponents.find((c) => c.id === selectedComponentId) || null
+    : null;
+  const exploreItem = currentMode === 'explore'
+    ? COMPONENT_CATALOG[selectedExploreType]
+    : null;
 
   return (
     <div
@@ -657,9 +670,11 @@ export const App: React.FC = () => {
         />
 
         {/* LEFT SIDEBAR: Rich Illustrated Components Drawer (in Lab mode) */}
-        {currentMode === 'lab' && (
+        {(currentMode === 'lab' || currentMode === 'explore') && (
           <ComponentSidebar
             onAddComponent={handleAddComponent}
+            onSelectComponent={currentMode === 'explore' ? handleSelectExploreComponent : undefined}
+            selectedComponentType={currentMode === 'explore' ? selectedExploreType : undefined}
             isOpen={isSidebarOpen}
             onToggleOpen={() => setIsSidebarOpen(!isSidebarOpen)}
           />
@@ -689,59 +704,13 @@ export const App: React.FC = () => {
           onDeselect={() => setSelectedComponentId(null)}
         />
 
-        {/* Explore Mode Component Selector Drawer (Left Side) */}
-        {currentMode === 'explore' && (
-          <div
-            className="stem-card explore-component-picker"
-            style={{
-              position: 'absolute',
-              top: '80px',
-              left: '16px',
-              zIndex: 20,
-              padding: '12px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-              maxWidth: '220px',
-              maxHeight: 'calc(100% - 100px)',
-              overflowY: 'auto',
-            }}
-          >
-            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Chọn linh kiện:
-            </div>
-            {(Object.keys(COMPONENT_CATALOG) as ComponentType[]).map((key) => {
-              const item = COMPONENT_CATALOG[key];
-              const isSelected = selectedExploreType === item.type;
-              return (
-                <button
-                  key={key}
-                  onClick={() => {
-                    sounds.playClick();
-                    handleSelectExploreComponent(item.type);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    border: isSelected ? '2px solid #0284c7' : '1px solid #e2e8f0',
-                    backgroundColor: isSelected ? '#e0f2fe' : '#ffffff',
-                    color: isSelected ? '#0369a1' : '#334155',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  <Eye size={16} />
-                  <span>{item.name}</span>
-                </button>
-              );
-            })}
-          </div>
+        {exploreItem && (
+          <ExploreAnnotation
+            item={exploreItem}
+            componentId={`explore-${selectedExploreType}`}
+            viewer={viewerRef.current}
+            onOpenDetails={() => setInspectingItem(exploreItem)}
+          />
         )}
 
         {/* Bottom Control Panels depending on Mode */}

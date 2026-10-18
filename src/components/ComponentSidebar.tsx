@@ -4,12 +4,15 @@ import { sounds } from '../audio/soundEffects';
 import {
   ChevronLeft,
   ChevronRight,
+  Eye,
   Plus,
   Sparkles,
 } from 'lucide-react';
 
 interface ComponentSidebarProps {
-  onAddComponent: (type: ComponentType) => void;
+  onAddComponent?: (type: ComponentType) => void;
+  onSelectComponent?: (type: ComponentType) => void;
+  selectedComponentType?: ComponentType;
   isOpen: boolean;
   onToggleOpen: () => void;
 }
@@ -18,10 +21,13 @@ type FilterCategory = 'all' | 'source' | 'load' | 'control';
 
 export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
   onAddComponent,
+  onSelectComponent,
+  selectedComponentType,
   isOpen,
   onToggleOpen,
 }) => {
   const [filter, setFilter] = useState<FilterCategory>('all');
+  const isExploreMode = Boolean(onSelectComponent);
 
   // Rich SVG Graphic Illustrations for all 14 components
   const illustrations: Record<ComponentType, React.ReactNode> = {
@@ -285,10 +291,10 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
         <div style={{ paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
           <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Sparkles size={16} color="#0284c7" />
-            <span>Kho Linh Kiện ({componentList.length})</span>
+            <span>{isExploreMode ? 'Chọn linh kiện quan sát' : `Kho Linh Kiện (${componentList.length})`}</span>
           </h3>
           <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-            Bấm vào linh kiện để đặt lên bàn 3D
+            {isExploreMode ? 'Chọn mô hình để xem tên và chức năng' : 'Bấm vào linh kiện để đặt lên bàn 3D'}
           </p>
 
           {/* Category Filter Pills */}
@@ -330,12 +336,19 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {filteredComponents.map((item) => {
             const tagColors = getTagColor(item.tag);
+            const isSelected = selectedComponentType === item.type;
             return (
               <button
                 key={item.type}
+                data-component-type={item.type}
+                aria-pressed={isExploreMode ? isSelected : undefined}
                 onClick={() => {
                   sounds.playClick();
-                  onAddComponent(item.type);
+                  if (onSelectComponent) {
+                    onSelectComponent(item.type);
+                  } else {
+                    onAddComponent?.(item.type);
+                  }
                   if (typeof window !== 'undefined' && window.innerWidth <= 640) {
                     onToggleOpen();
                   }
@@ -346,8 +359,8 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
                   gap: '8px',
                   padding: '7px 8px',
                   borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  backgroundColor: '#f8fafc',
+                  border: isSelected ? '2px solid #0284c7' : '1px solid #e2e8f0',
+                  backgroundColor: isSelected ? '#e0f2fe' : '#f8fafc',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.15s ease',
@@ -355,13 +368,13 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
                   overflow: 'hidden',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f0f9ff';
+                  e.currentTarget.style.backgroundColor = isSelected ? '#dbeafe' : '#f0f9ff';
                   e.currentTarget.style.borderColor = '#38bdf8';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f8fafc';
-                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.backgroundColor = isSelected ? '#e0f2fe' : '#f8fafc';
+                  e.currentTarget.style.borderColor = isSelected ? '#0284c7' : '#e2e8f0';
                   e.currentTarget.style.transform = 'none';
                 }}
               >
@@ -431,15 +444,15 @@ export const ComponentSidebar: React.FC<ComponentSidebarProps> = ({
                     width: '22px',
                     height: '22px',
                     borderRadius: '50%',
-                    backgroundColor: '#e0f2fe',
-                    color: '#0284c7',
+                    backgroundColor: isExploreMode && isSelected ? '#0284c7' : '#e0f2fe',
+                    color: isExploreMode && isSelected ? '#ffffff' : '#0284c7',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                   }}
                 >
-                  <Plus size={13} strokeWidth={3} />
+                  {isExploreMode ? <Eye size={13} /> : <Plus size={13} strokeWidth={3} />}
                 </div>
               </button>
             );

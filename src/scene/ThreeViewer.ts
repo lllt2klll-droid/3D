@@ -16,6 +16,7 @@ import { createResistorMesh } from './models/ResistorModel';
 import { createPotentiometerMesh, PotentiometerObject } from './models/PotentiometerModel';
 import { createFuseMesh, FuseObject } from './models/FuseModel';
 import { createLedMesh, LedObject } from './models/LedModel';
+import { ExplorePart } from './exploreParts';
 
 const polarityMaterials = new Map<'positive' | 'negative', THREE.SpriteMaterial>();
 
@@ -119,6 +120,7 @@ export class ThreeViewer {
   private callbacks: ViewerCallbacks = {};
   private hoveredHalo: THREE.Object3D | null = null;
   private selectedTerminalKey: string | null = null;
+  private isExploreMode = false;
 
   // Component Dragging State
   private isDraggingComp: boolean = false;
@@ -344,6 +346,7 @@ export class ThreeViewer {
   };
 
   private onPointerDown = (e: PointerEvent) => {
+    if (this.isExploreMode) return;
     if (e.button !== 0) return;
 
     this.mouse = this.getNormalizedMouse(e);
@@ -698,14 +701,57 @@ export class ThreeViewer {
     this.controls.update();
   }
 
+  public setExploreMode(isExploreMode: boolean) {
+    this.isExploreMode = isExploreMode;
+  }
+
   /**
-   * Focus camera on a specific component (e.g., in Explore Mode)
+   * Focus camera on a component while keeping its full model in view.
    */
   public focusOnComponent(comp: CircuitComponent) {
-    const target = new THREE.Vector3(...comp.position).add(new THREE.Vector3(0, 0.4, 0));
+    const mesh = this.componentMeshes.get(comp.id);
+    if (!mesh) return;
+
+    const bounds = new THREE.Box3().setFromObject(mesh);
+    const target = bounds.getCenter(new THREE.Vector3());
+    const size = bounds.getSize(new THREE.Vector3());
+    const verticalFov = THREE.MathUtils.degToRad(this.camera.fov);
+    const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * this.camera.aspect);
+    const limitingFov = Math.min(verticalFov, horizontalFov);
+    const largestDimension = Math.max(size.x, size.y, size.z, 0.8);
+    const distance = (largestDimension / (2 * Math.tan(limitingFov / 2))) * 1.2;
+    const viewDirection = new THREE.Vector3(1, 0.75, 1).normalize();
+
     this.controls.target.copy(target);
-    this.camera.position.set(comp.position[0] + 2.5, comp.position[1] + 2.2, comp.position[2] + 2.5);
+    this.camera.position.copy(target).addScaledVector(viewDirection, distance);
     this.controls.update();
+  }
+
+  public projectComponentAnchor(
+    compId: string,
+    localPosition?: ExplorePart['position']
+  ): { x: number; y: number; width: number; height: number; visible: boolean } | null {
+    const mesh = this.componentMeshes.get(compId);
+    if (!mesh) return null;
+
+    const bounds = new THREE.Box3().setFromObject(mesh);
+    const anchor = localPosition
+      ? mesh.localToWorld(new THREE.Vector3(...localPosition))
+      : bounds.getCenter(new THREE.Vector3());
+    if (!localPosition) {
+      anchor.y = bounds.min.y + (bounds.max.y - bounds.min.y) * 0.58;
+    }
+    anchor.project(this.camera);
+
+    const width = this.renderer.domElement.clientWidth;
+    const height = this.renderer.domElement.clientHeight;
+    return {
+      x: (anchor.x * 0.5 + 0.5) * width,
+      y: (-anchor.y * 0.5 + 0.5) * height,
+      width,
+      height,
+      visible: anchor.z >= -1 && anchor.z <= 1 && anchor.x >= -1 && anchor.x <= 1 && anchor.y >= -1 && anchor.y <= 1,
+    };
   }
 
   /**

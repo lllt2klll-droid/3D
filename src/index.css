@@ -70,6 +70,196 @@
   box-shadow: 0 1px 0 #1e293b;
 }
 
+.explore-annotation-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  pointer-events: none;
+}
+
+.explore-annotation-arrow {
+  overflow: visible;
+}
+
+.explore-annotation-card {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(300px, calc(100% - 24px));
+  padding: 12px 14px;
+  max-height: min(68vh, 680px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  border: 1px solid #bae6fd;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+  color: #334155;
+}
+
+.explore-annotation-card strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.explore-annotation-card strong + span {
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.explore-annotation-card .explore-annotation-hint {
+  color: #0284c7;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.explore-part-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 3px;
+  padding: 9px 10px;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  background: #f0f9ff;
+}
+
+.explore-part-detail strong {
+  color: #075985;
+  font-size: 0.9rem;
+}
+
+.explore-part-detail > span:last-child {
+  color: #334155;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.explore-part-number {
+  color: #0284c7;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.explore-part-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.explore-part-list button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 5px 7px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.explore-part-list button > span {
+  display: inline-grid;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.65rem;
+}
+
+.explore-part-list button.active {
+  border-color: #0284c7;
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.explore-part-list button.active > span {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.explore-full-info {
+  min-height: 38px;
+  margin-top: 2px;
+  border: none;
+  border-radius: 10px;
+  background: #0284c7;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.explore-annotation-eyebrow {
+  color: #0284c7;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.app-shell[data-theme='night'] .explore-annotation-card {
+  border-color: #0e7490;
+  background: rgba(30, 41, 59, 0.96);
+  color: #cbd5e1;
+}
+
+.app-shell[data-theme='night'] .explore-annotation-card strong {
+  color: #f1f5f9;
+}
+
+.app-shell[data-theme='night'] .explore-annotation-card strong + span {
+  color: #cbd5e1;
+}
+
+.app-shell[data-theme='night'] .explore-part-detail {
+  border-color: #155e75;
+  background: #164e63;
+}
+
+.app-shell[data-theme='night'] .explore-part-detail strong,
+.app-shell[data-theme='night'] .explore-part-detail > span:last-child {
+  color: #e0f2fe;
+}
+
+.app-shell[data-theme='night'] .explore-part-list button {
+  border-color: #475569;
+  background: #273449;
+  color: #e2e8f0;
+}
+
+.app-shell[data-theme='night'] .explore-part-list button.active {
+  border-color: #38bdf8;
+  background: #164e63;
+  color: #e0f2fe;
+}
+
+.app-shell[data-theme='night'] .explore-part-list button > span {
+  background: #475569;
+  color: #f1f5f9;
+}
+
+.app-shell[data-theme='night'] .explore-part-list button.active > span {
+  background: #0284c7;
+}
+
 .app-shell[data-theme='night'] [style*="background-color: rgb(255, 255, 255)"],
 .app-shell[data-theme='night'] [style*="background-color: rgba(255, 255, 255"],
 .app-shell[data-theme='night'] [style*="background-color: #ffffff"],
@@ -382,16 +572,21 @@ button, input, select, textarea {
     height: 48px !important;
   }
 
-  .explore-component-picker {
-    top: 72px !important;
-    right: 12px !important;
-    left: auto !important;
-    width: min(220px, calc(100vw - 24px));
-    max-height: 32dvh !important;
+  .explore-annotation-card {
+    top: 10px;
+    right: 10px;
+    width: min(230px, calc(100% - 20px));
+    max-height: 46dvh;
+    padding: 10px 12px;
   }
 
-  .explore-component-picker button {
-    min-height: 44px;
+  .explore-part-list {
+    grid-template-columns: 1fr;
+  }
+
+  .explore-part-list button {
+    min-height: 40px;
+    font-size: 0.74rem;
   }
 
   .hide-on-mobile {
